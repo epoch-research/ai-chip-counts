@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chip Deployment Timeline Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .control-group label {
+            font-weight: 500;
+            color: #555;
+        }
+        select, button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        select:hover, button:hover {
+            border-color: #999;
+        }
+        button {
+            background: #e8e8e8;
+            color: #555;
+            border: 1px solid #ccc;
+        }
+        button:hover {
+            background: #d0d0d0;
+        }
+        button.active {
+            background: #1a73e8;
+            color: white;
+            border: 1px solid #1a73e8;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(26, 115, 232, 0.4);
+        }
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .legend-note {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+        }
+        .view-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .designer-buttons {
+            display: flex;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="main-title">AI Chip Deployment Timeline</h1>
+        <p class="subtitle" id="main-subtitle">Estimated chip deployments by type and quarter</p>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Designer:</label>
+                <div class="designer-buttons">
+                    <button id="btn-nvidia" onclick="setDesigner('nvidia')">NVIDIA</button>
+                    <button id="btn-google" onclick="setDesigner('google')">Google (TPU)</button>
+                    <button id="btn-amd" onclick="setDesigner('amd')">AMD (MI)</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>View:</label>
+                <div class="view-buttons">
+                    <button id="btn-fiscal" onclick="setView('fiscal')">Fiscal Quarters</button>
+                    <button id="btn-calendar" onclick="setView('calendar')">Calendar Quarters</button>
+                    <button id="btn-combined" onclick="setView('combined')">Combined View</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Metric:</label>
+                <select id="metric-select" onchange="updateChart()">
+                    <option value="units">Number of Units</option>
+                    <option value="compute">Compute (H100e)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title" id="chart-title">Chip Deployments by Quarter</div>
+            <canvas id="mainChart"></canvas>
+            <p class="legend-note" id="legend-note"></p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GOOGLE TPU DATA ====================
+        const googleColors = {
+            'TPU v4i': '#ea4335',
+            'TPU v4': '#fbbc04',
+            'TPU v5e': '#34a853',
+            'TPU v5p': '#4285f4',
+            'TPU v6e': '#9c27b0',
+            'TPU v7': '#ff5722'
+        };
+
+        const googleFiscalData = {
+            quarters: ['Q1_FY23', 'Q2_FY23', 'Q3_FY23', 'Q4_FY23', 'Q1_FY24', 'Q2_FY24', 'Q3_FY24', 'Q4_FY24', 'Q1_FY25', 'Q2_FY25', 'Q3_FY25', 'Q4_FY25'],
+            dates: ['Oct 31, 2022 - Jan 29, 2023', 'Jan 30 - Apr 30, 2023', 'May 1 - Jul 30, 2023', 'Jul 31 - Oct 29, 2023', 'Oct 30, 2023 - Feb 4, 2024', 'Feb 5 - May 5, 2024', 'May 6 - Aug 4, 2024', 'Aug 5 - Nov 3, 2024', 'Nov 4, 2024 - Feb 2, 2025', 'Feb 3 - May 4, 2025', 'May 5 - Aug 3, 2025', 'Aug 4 - Nov 2, 2025'],
+            sortKey: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            data: {
+                'TPU v4i': { units: [30318, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], compute: [2114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'TPU v4': { units: [97543, 131146, 33842, 0, 0, 0, 0, 0, 0, 0, 0, 0], compute: [13554, 18223, 4702, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'TPU v5e': { units: [23195, 47302, 155470, 290170, 459569, 410031, 352589, 355512, 264183, 0, 0, 0], compute: [4606, 9393, 30874, 57623, 91263, 81426, 70019, 70599, 52462, 0, 0, 0] },
+                'TPU v5p': { units: [0, 0, 0, 0, 22720, 121861, 158955, 158255, 117905, 85201, 0, 0], compute: [0, 0, 0, 0, 10539, 56528, 73734, 73409, 54693, 39522, 0, 0] },
+                'TPU v6e': { units: [0, 0, 0, 0, 0, 0, 0, 64048, 234569, 511242, 747899, 706123], compute: [0, 0, 0, 0, 0, 0, 0, 59420, 217620, 474301, 693857, 655100] },
+                'TPU v7': { units: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80417], compute: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187491] }
+            }
+        };
+
+        const googleCalendarData = {
+            quarters: ['Q4 2022', 'Q1 2023', 'Q2 2023', 'Q3 2023', 'Q4 2023', 'Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'],
+            dates: ['Oct 1 - Dec 31, 2022', 'Jan 1 - Mar 31, 2023', 'Apr 1 - Jun 30, 2023', 'Jul 1 - Sep 30, 2023', 'Oct 1 - Dec 31, 2023', 'Jan 1 - Mar 31, 2024', 'Apr 1 - Jun 30, 2024', 'Jul 1 - Sep 30, 2024', 'Oct 1 - Dec 31, 2024', 'Jan 1 - Mar 31, 2025', 'Apr 1 - Jun 30, 2025', 'Jul 1 - Sep 30, 2025', 'Oct 1 - Dec 31, 2025'],
+            sortKey: [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5],
+            data: {
+                'TPU v4i': { units: [20656, 9661, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], compute: [1440, 673, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'TPU v4': { units: [66457, 118996, 65920, 11156, 0, 0, 0, 0, 0, 0, 0, 0, 0], compute: [9234, 16535, 9160, 1550, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'TPU v5e': { units: [15803, 39100, 119810, 248952, 387909, 416458, 374682, 358295, 301209, 95802, 0, 0, 0], compute: [3138, 7764, 23792, 49438, 77033, 82702, 74406, 71152, 59815, 19024, 0, 0, 0] },
+                'TPU v5p': { units: [0, 0, 0, 0, 14605, 83106, 144688, 160263, 134277, 96124, 31833, 0, 0], compute: [0, 0, 0, 0, 6775, 38550, 67116, 74341, 62287, 44589, 14766, 0, 0] },
+                'TPU v6e': { units: [0, 0, 0, 0, 0, 0, 0, 40118, 173436, 405292, 659478, 729491, 256066], compute: [0, 0, 0, 0, 0, 0, 0, 37219, 160903, 376006, 611825, 676779, 237563] },
+                'TPU v7': { units: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51254, 29162], compute: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 119499, 67991] }
+            }
+        };
+
+        // ==================== NVIDIA DATA ====================
+        const nvidiaColors = {
+            'A100': '#76b900',
+            'A800': '#8bc34a',
+            'H100/H200': '#1a9641',
+            'H800': '#66bd63',
+            'H20': '#a6d96a',
+            'B200': '#006837',
+            'B300': '#004529'
+        };
+
+        const nvidiaFiscalData = {
+            quarters: ['FY23Q1', 'FY23Q2', 'FY23Q3', 'FY23Q4', 'FY24Q1', 'FY24Q2', 'FY24Q3', 'FY24Q4', 'FY25Q1', 'FY25Q2', 'FY25Q3', 'FY25Q4', 'FY26Q1', 'FY26Q2', 'FY26Q3'],
+            dates: ['Jan 31 - May 1, 2022', 'May 2 - Jul 31, 2022', 'Aug 1 - Oct 30, 2022', 'Oct 31, 2022 - Jan 29, 2023', 'Jan 30 - Apr 30, 2023', 'May 1 - Jul 30, 2023', 'Jul 31 - Oct 29, 2023', 'Oct 30, 2023 - Jan 28, 2024', 'Jan 29 - Apr 28, 2024', 'Apr 29 - Jul 28, 2024', 'Jul 29 - Oct 27, 2024', 'Oct 28, 2024 - Jan 26, 2025', 'Jan 27 - Apr 27, 2025', 'Apr 28 - Jul 27, 2025', 'Jul 28 - Oct 26, 2025'],
+            sortKey: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            data: {
+                'A100': { units: [226248, 226776, 204902, 66968, 55963, 68891, 47096, 0, 0, 0, 0, 0, 0, 0, 0], compute: [70980, 71146, 64283, 21010, 17557, 21613, 14775, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'A800': { units: [0, 0, 0, 41121, 23809, 27352, 28454, 0, 0, 0, 0, 0, 0, 0, 0], compute: [0, 0, 0, 12901, 7469, 8581, 8927, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'H100/H200': { units: [0, 0, 9735, 46055, 69146, 211055, 308095, 511389, 583409, 671285, 818390, 594457, 198302, 208739, 73801], compute: [0, 0, 9735, 46055, 69146, 211055, 308095, 511389, 583409, 671285, 818390, 594457, 198302, 208739, 73801] },
+                'H800': { units: [0, 0, 0, 0, 11107, 43715, 64853, 0, 0, 0, 0, 0, 0, 0, 0], compute: [0, 0, 0, 0, 11107, 43715, 64853, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'H20': { units: [0, 0, 0, 0, 0, 0, 0, 0, 200664, 250898, 306818, 363194, 377697, 58244, 0], compute: [0, 0, 0, 0, 0, 0, 0, 0, 29862, 37338, 45660, 54050, 56208, 8668, 0] },
+                'B200': { units: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 281679, 624699, 355688, 337318], compute: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 708092, 1570384, 894137, 847959] },
+                'B300': { units: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 305439, 634773], compute: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 767819, 1595710] }
+            }
+        };
+
+        const nvidiaCalendarData = {
+            quarters: ['Q1 2022', 'Q2 2022', 'Q3 2022', 'Q4 2022', 'Q1 2023', 'Q2 2023', 'Q3 2023', 'Q4 2023', 'Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'],
+            dates: ['Jan 1 - Mar 31, 2022', 'Apr 1 - Jun 30, 2022', 'Jul 1 - Sep 30, 2022', 'Oct 1 - Dec 31, 2022', 'Jan 1 - Mar 31, 2023', 'Apr 1 - Jun 30, 2023', 'Jul 1 - Sep 30, 2023', 'Oct 1 - Dec 31, 2023', 'Jan 1 - Mar 31, 2024', 'Apr 1 - Jun 30, 2024', 'Jul 1 - Sep 30, 2024', 'Oct 1 - Dec 31, 2024', 'Jan 1 - Mar 31, 2025', 'Apr 1 - Jun 30, 2025', 'Jul 1 - Sep 30, 2025', 'Oct 1 - Dec 31, 2025'],
+            sortKey: [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5],
+            data: {
+                'A100': { units: [148447, 226365, 212861, 113551, 59581, 64202, 54535, 15998, 0, 0, 0, 0, 0, 0, 0, 0], compute: [46807, 71375, 67117, 35803, 18786, 20243, 17195, 5044, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'A800': { units: [0, 0, 0, 27363, 29826, 26214, 28083, 9592, 0, 0, 0, 0, 0, 0, 0, 0], compute: [0, 0, 0, 8627, 9404, 8265, 8854, 3024, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'H100/H200': { units: [0, 0, 6277, 33038, 59102, 155838, 265955, 471224, 606811, 693397, 837302, 793115, 411603, 251461, 145907, 30381], compute: [0, 0, 6277, 33038, 59102, 155838, 265955, 471224, 606811, 693397, 837302, 793115, 411603, 251461, 145907, 30381] },
+                'H800': { units: [0, 0, 0, 0, 7315, 32045, 55946, 21116, 0, 0, 0, 0, 0, 0, 0, 0], compute: [0, 0, 0, 0, 7315, 32045, 55946, 21116, 0, 0, 0, 0, 0, 0, 0, 0] },
+                'H20': { units: [0, 0, 0, 0, 0, 0, 0, 0, 133965, 222095, 269711, 336690, 372892, 166036, 19497, 0], compute: [0, 0, 0, 0, 0, 0, 0, 0, 20037, 33218, 40340, 50359, 55773, 24834, 2916, 0] },
+                'B200': { units: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 186764, 510087, 446984, 344020, 113911], compute: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 471865, 1288751, 1129318, 869176, 287799] },
+                'B300': { units: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 203134, 521105, 212361], compute: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 513226, 1316587, 536537] }
+            }
+        };
+
+        // ==================== AMD DATA ====================
+        const amdColors = {
+            'MI250X': '#ed1c24',
+            'MI300X': '#00a651',
+            'MI300A': '#0072bc',
+            'MI325X': '#f7931e',
+            'MI350X': '#92278f',
+            'MI355X': '#00bcd4'
+        };
+
+        // AMD fiscal quarters (aligned with calendar quarters)
+        const amdFiscalData = {
+            quarters: ['FY24 Q1', 'FY24 Q2', 'FY24 Q3', 'FY24 Q4', 'FY25 Q1', 'FY25 Q2', 'FY25 Q3'],
+            dates: ['Jan 1 - Mar 31, 2024', 'Apr 1 - Jun 30, 2024', 'Jul 1 - Sep 30, 2024', 'Oct 1 - Dec 31, 2024', 'Jan 1 - Mar 31, 2025', 'Apr 1 - Jun 30, 2025', 'Jul 1 - Sep 30, 2025'],
+            sortKey: [1, 2, 3, 4, 5, 6, 7],
+            data: {
+                'MI250X': { units: [30367, 6645, 4449, 3580, 0, 0, 0], compute: [5877, 1286, 861, 692, 0, 0, 0] },
+                'MI300X': { units: [34445, 80701, 94469, 115303, 85189, 45748, 45815], compute: [45514, 106636, 124829, 152359, 112567, 60450, 60539] },
+                'MI300A': { units: [3537, 10490, 43514, 52315, 4565, 0, 0], compute: [3505, 10395, 43119, 51839, 4523, 0, 0] },
+                'MI325X': { units: [0, 0, 0, 0, 32645, 26771, 19754], compute: [0, 0, 0, 0, 43137, 35374, 26102] },
+                'MI350X': { units: [0, 0, 0, 0, 0, 4089, 36291], compute: [0, 0, 0, 0, 0, 9533, 84612] },
+                'MI355X': { units: [0, 0, 0, 0, 0, 0, 12387], compute: [0, 0, 0, 0, 0, 0, 31503] }
+            }
+        };
+
+        // AMD calendar quarters (same data since fiscal = calendar for AMD)
+        const amdCalendarData = {
+            quarters: ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025', 'Q3 2025'],
+            dates: ['Jan 1 - Mar 31, 2024', 'Apr 1 - Jun 30, 2024', 'Jul 1 - Sep 30, 2024', 'Oct 1 - Dec 31, 2024', 'Jan 1 - Mar 31, 2025', 'Apr 1 - Jun 30, 2025', 'Jul 1 - Sep 30, 2025'],
+            sortKey: [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5],
+            data: {
+                'MI250X': { units: [30367, 6645, 4449, 3580, 0, 0, 0], compute: [5877, 1286, 861, 692, 0, 0, 0] },
+                'MI300X': { units: [34445, 80701, 94469, 115303, 85189, 45748, 45815], compute: [45514, 106636, 124829, 152359, 112567, 60450, 60539] },
+                'MI300A': { units: [3537, 10490, 43514, 52315, 4565, 0, 0], compute: [3505, 10395, 43119, 51839, 4523, 0, 0] },
+                'MI325X': { units: [0, 0, 0, 0, 32645, 26771, 19754], compute: [0, 0, 0, 0, 43137, 35374, 26102] },
+                'MI350X': { units: [0, 0, 0, 0, 0, 4089, 36291], compute: [0, 0, 0, 0, 0, 9533, 84612] },
+                'MI355X': { units: [0, 0, 0, 0, 0, 0, 12387], compute: [0, 0, 0, 0, 0, 0, 31503] }
+            }
+        };
+
+        // ==================== STATE ====================
+        let currentDesigner = 'google';
+        let currentView = 'fiscal';
+        let chart = null;
+
+        // ==================== HELPERS ====================
+        function createStripePattern(color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 10;
+            canvas.height = 10;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = color + '40';
+            ctx.fillRect(0, 0, 10, 10);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 10);
+            ctx.lineTo(10, 0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-5, 5);
+            ctx.lineTo(5, -5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(5, 15);
+            ctx.lineTo(15, 5);
+            ctx.stroke();
+
+            return ctx.createPattern(canvas, 'repeat');
+        }
+
+        function getDataForDesigner() {
+            if (currentDesigner === 'nvidia') {
+                return {
+                    fiscal: nvidiaFiscalData,
+                    calendar: nvidiaCalendarData,
+                    colors: nvidiaColors,
+                    chipTypes: Object.keys(nvidiaColors),
+                    name: 'NVIDIA',
+                    fiscalNote: 'Fiscal quarters based on NVIDIA\'s fiscal year (ends ~late January)',
+                    calendarNote: 'Calendar quarters interpolated from fiscal quarter data'
+                };
+            } else if (currentDesigner === 'google') {
+                return {
+                    fiscal: googleFiscalData,
+                    calendar: googleCalendarData,
+                    colors: googleColors,
+                    chipTypes: Object.keys(googleColors),
+                    name: 'Google TPU',
+                    fiscalNote: 'Fiscal quarters based on Google\'s fiscal year (ends ~late January)',
+                    calendarNote: 'Calendar quarters interpolated from fiscal quarter data'
+                };
+            } else {
+                return {
+                    fiscal: amdFiscalData,
+                    calendar: amdCalendarData,
+                    colors: amdColors,
+                    chipTypes: Object.keys(amdColors),
+                    name: 'AMD MI',
+                    fiscalNote: 'AMD fiscal quarters (aligned with calendar quarters)',
+                    calendarNote: 'Calendar quarters (same as fiscal for AMD)'
+                };
+            }
+        }
+
+        function getCombinedData(metric, designerData) {
+            const combined = [];
+
+            designerData.fiscal.quarters.forEach((q, i) => {
+                combined.push({
+                    label: q + ' (F)',
+                    sortKey: designerData.fiscal.sortKey[i],
+                    type: 'fiscal',
+                    date: designerData.fiscal.dates[i],
+                    data: {}
+                });
+                designerData.chipTypes.forEach(chip => {
+                    combined[combined.length - 1].data[chip] = designerData.fiscal.data[chip][metric][i];
+                });
+            });
+
+            designerData.calendar.quarters.forEach((q, i) => {
+                combined.push({
+                    label: q + ' (C)',
+                    sortKey: designerData.calendar.sortKey[i],
+                    type: 'calendar',
+                    date: designerData.calendar.dates[i],
+                    data: {}
+                });
+                designerData.chipTypes.forEach(chip => {
+                    combined[combined.length - 1].data[chip] = designerData.calendar.data[chip][metric][i];
+                });
+            });
+
+            combined.sort((a, b) => a.sortKey - b.sortKey);
+            return combined;
+        }
+
+        // ==================== VIEW CONTROLS ====================
+        function setDesigner(designer) {
+            currentDesigner = designer;
+            document.querySelectorAll('.designer-buttons button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${designer}`).classList.add('active');
+
+            const data = getDataForDesigner();
+            document.getElementById('main-title').textContent = `${data.name} Deployment Timeline`;
+            document.getElementById('main-subtitle').textContent = `Estimated ${data.name} deployments by type and quarter`;
+
+            updateChart();
+        }
+
+        function setView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-buttons button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${view}`).classList.add('active');
+            updateChart();
+        }
+
+        // ==================== CHART UPDATE ====================
+        function updateChart() {
+            const metric = document.getElementById('metric-select').value;
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const designerData = getDataForDesigner();
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            let labels, datasets, title, note, dateLabels;
+
+            if (currentView === 'fiscal') {
+                labels = designerData.fiscal.quarters;
+                dateLabels = designerData.fiscal.dates;
+                title = `${designerData.name} Deployments - Fiscal Quarters`;
+                note = designerData.fiscalNote;
+                datasets = designerData.chipTypes.map(chip => ({
+                    label: chip,
+                    data: designerData.fiscal.data[chip][metric],
+                    backgroundColor: designerData.colors[chip],
+                    borderColor: designerData.colors[chip],
+                    borderWidth: 1
+                }));
+            } else if (currentView === 'calendar') {
+                labels = designerData.calendar.quarters;
+                dateLabels = designerData.calendar.dates;
+                title = `${designerData.name} Deployments - Calendar Quarters`;
+                note = designerData.calendarNote;
+                datasets = designerData.chipTypes.map(chip => ({
+                    label: chip,
+                    data: designerData.calendar.data[chip][metric],
+                    backgroundColor: designerData.colors[chip],
+                    borderColor: designerData.colors[chip],
+                    borderWidth: 1
+                }));
+            } else {
+                // Combined view
+                const combined = getCombinedData(metric, designerData);
+                labels = combined.map(c => {
+                    if (c.type === 'fiscal') {
+                        return '📊 ' + c.label.replace(' (F)', '') + ' [Fiscal]';
+                    } else {
+                        return '📅 ' + c.label.replace(' (C)', '') + ' [Calendar]';
+                    }
+                });
+                dateLabels = combined.map(c => c.date);
+                title = `${designerData.name} Deployments - Combined View (Fiscal & Calendar)`;
+                note = '📊 = Fiscal Quarter (solid bars) | 📅 = Calendar Quarter (striped bars)';
+
+                datasets = designerData.chipTypes.map(chip => ({
+                    label: chip,
+                    data: combined.map(c => c.data[chip] || 0),
+                    backgroundColor: combined.map(c => {
+                        const baseColor = designerData.colors[chip];
+                        if (c.type === 'calendar') {
+                            return createStripePattern(baseColor);
+                        }
+                        return baseColor;
+                    }),
+                    borderColor: combined.map(c => designerData.colors[chip]),
+                    borderWidth: combined.map(c => c.type === 'calendar' ? 2 : 1)
+                }));
+            }
+
+            document.getElementById('chart-title').textContent = title;
+            document.getElementById('legend-note').textContent = note;
+
+            let unitType = 'GPU';
+            if (currentDesigner === 'google') unitType = 'TPU';
+            else if (currentDesigner === 'amd') unitType = 'MI';
+            else if (currentDesigner === 'nvidia') unitType = 'GPU';
+
+            const yAxisLabel = metric === 'units'
+                ? `Number of ${unitType} Units`
+                : 'Compute (H100 equivalents)';
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const idx = tooltipItems[0].dataIndex;
+                                    const quarterLabel = labels[idx];
+                                    const dateRange = dateLabels[idx];
+                                    return [quarterLabel, dateRange];
+                                },
+                                label: function(context) {
+                                    const value = context.raw;
+                                    if (metric === 'units') {
+                                        return `${context.dataset.label}: ${value.toLocaleString()} units`;
+                                    } else {
+                                        return `${context.dataset.label}: ${value.toLocaleString()} H100e`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000000) {
+                                        return (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return (value / 1000).toFixed(0) + 'K';
+                                    }
+                                    return value;
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: yAxisLabel
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        setDesigner('nvidia');
+        setView('fiscal');
+    </script>
+</body>
+</html>
