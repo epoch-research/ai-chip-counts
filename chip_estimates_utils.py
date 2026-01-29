@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+# Warn (not error) on invalid operations like NaN
+np.seterr(invalid='raise')
+
 
 # ===============================
 # Core quarterly simulation logic
@@ -59,7 +62,7 @@ def estimate_cumulative_chip_sales(
     sample_shares,
     sample_base_price,
     get_deflation_factor=None,
-    revenue_bias_dist=None,
+    sample_revenue_uncertainty=None,
     n_samples=5000,
 ):
     """
@@ -67,7 +70,7 @@ def estimate_cumulative_chip_sales(
 
     Similar to estimate_chip_sales, but presamples certain parameters to correlate them
     across quarters. Use this when estimating cumulative totals where you want price
-    uncertainty (and optionally revenue bias) to compound rather than average out.
+    uncertainty (and optionally revenue multiplier) to compound rather than average out.
 
     Args:
         quarters: list of quarter identifiers (e.g., ['Q1_2023', 'Q2_2023', ...])
@@ -80,8 +83,10 @@ def estimate_cumulative_chip_sales(
         get_deflation_factor: fn(quarter, chip) -> float, returns price multiplier for a
             quarter relative to the base price. Should return 1.0 for the chip's first
             quarter and <1.0 for later quarters as prices decline. If None, no deflation.
-        revenue_bias_dist: squigglepy distribution for systematic revenue estimation error.
-            Sampled once and applied as a multiplier to all quarters. If None, no bias.
+        sample_revenue_uncertainty: fn() -> float, samples a multiplier for revenue uncertainty.
+            Sampled once and applied to all quarters. Use this to model correlated uncertainty
+            in revenue estimates (e.g., lambda: sq.to(0.9, 1.1) @ 1 if revenue could be 10% off
+            in either direction, consistently across quarters). If None, no multiplier applied.
         n_samples: number of Monte Carlo samples
 
     Returns:
@@ -91,7 +96,7 @@ def estimate_cumulative_chip_sales(
     Note on correlations:
         - Prices are sampled once per chip type and reused (with deflation) across all quarters.
           This means if we sample a "high price world", that persists for the entire simulation.
-        - Revenue bias (if provided) is sampled once and applied to all quarters.
+        - Revenue uncertainty (if provided) is sampled once and applied to all quarters.
         - Revenue and production mix shares are sampled independently each quarter.
     """
     # === PRESAMPLE CORRELATED PARAMS ===
@@ -102,21 +107,21 @@ def estimate_cumulative_chip_sales(
         for chip in chip_types
     }
 
-    # Revenue bias (if provided)
-    rev_bias = revenue_bias_dist @ n_samples if revenue_bias_dist else np.ones(n_samples)
+    # Revenue uncertainty (if provided)
+    rev_multiplier = np.array([sample_revenue_uncertainty() for _ in range(n_samples)]) if sample_revenue_uncertainty else np.ones(n_samples)
 
     # === MAIN LOOP ===
     results = {chip: np.zeros(n_samples) for chip in chip_types}
 
     for quarter in quarters:
-        # Sample revenue (uncorrelated) with bias (correlated)
-        revenue = np.array([sample_revenue(quarter) for _ in range(n_samples)]) * rev_bias
+        # Sample revenue (uncorrelated) with uncertainty multiplier (correlated)
+        revenue = np.array([sample_revenue(quarter) for _ in range(n_samples)]) * rev_multiplier
 
         # Sample shares (uncorrelated)
         shares_list = [sample_shares(quarter) for _ in range(n_samples)]
 
         for chip in chip_types:
-            shares = np.array([s.get(chip, 0) for s in shares_list])
+            shares = np.nan_to_num(np.array([s.get(chip, 0) for s in shares_list]), nan=0.0)
             deflation = get_deflation_factor(quarter, chip) if get_deflation_factor else 1.0
             price = base_price_samples[chip] * deflation
             results[chip] += (revenue * shares) / price
