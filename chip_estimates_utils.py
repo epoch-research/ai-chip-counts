@@ -90,8 +90,9 @@ def estimate_cumulative_chip_sales(
         n_samples: number of Monte Carlo samples
 
     Returns:
-        dict of {chip: np.array of cumulative chip counts across all quarters}
-        Each array has n_samples elements representing the distribution of total chips.
+        dict of {quarter: {chip: np.array of chip counts for that quarter}}
+        Each array has n_samples elements representing the distribution of chips for that quarter.
+        Use aggregate_by_chip_type() to get cumulative totals by chip.
 
     Note on correlations:
         - Prices are sampled once per chip type and reused (with deflation) across all quarters.
@@ -111,7 +112,7 @@ def estimate_cumulative_chip_sales(
     rev_multiplier = np.array([sample_revenue_uncertainty() for _ in range(n_samples)]) if sample_revenue_uncertainty else np.ones(n_samples)
 
     # === MAIN LOOP ===
-    results = {chip: np.zeros(n_samples) for chip in chip_types}
+    results = {quarter: {chip: np.zeros(n_samples) for chip in chip_types} for quarter in quarters}
 
     for quarter in quarters:
         # Sample revenue (uncorrelated) with uncertainty multiplier (correlated)
@@ -124,9 +125,33 @@ def estimate_cumulative_chip_sales(
             shares = np.nan_to_num(np.array([s.get(chip, 0) for s in shares_list]), nan=0.0)
             deflation = get_deflation_factor(quarter, chip) if get_deflation_factor else 1.0
             price = base_price_samples[chip] * deflation
-            results[chip] += (revenue * shares) / price
+            results[quarter][chip] = (revenue * shares) / price
 
     return results
+
+
+def aggregate_by_chip_type(quarterly_results):
+    """
+    Aggregate quarterly chip results into cumulative totals by chip type.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+                           Output from estimate_cumulative_chip_sales() or estimate_chip_sales()
+
+    Returns:
+        dict of {chip: np.array of cumulative chip counts across all quarters}
+        Each array has n_samples elements representing the distribution of total chips.
+    """
+    quarters = list(quarterly_results.keys())
+    chip_types = list(quarterly_results[quarters[0]].keys())
+    n_samples = len(quarterly_results[quarters[0]][chip_types[0]])
+
+    cumulative = {chip: np.zeros(n_samples) for chip in chip_types}
+    for quarter in quarters:
+        for chip in chip_types:
+            cumulative[chip] += np.array(quarterly_results[quarter][chip])
+
+    return cumulative
 
 
 def normalize_shares(raw_shares):
@@ -483,6 +508,118 @@ def interpolate_to_calendar_quarters(sim_results, quarter_dates, verbose=True):
                 calendar_results[cq][version]['p95'] += fq_stats['p95'] * fraction
 
     return calendar_results
+
+
+def interpolate_samples_to_calendar_quarters(quarterly_results, quarter_dates):
+    """
+    Interpolate fiscal quarter samples to calendar quarters (sample-based).
+
+    Unlike interpolate_to_calendar_quarters which averages percentiles, this function
+    preserves the full sample arrays by weighting each sample individually. This
+    maintains correlations across chips and produces accurate confidence intervals.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+                           Output from estimate_chip_sales() or estimate_cumulative_chip_sales()
+        quarter_dates: dict of {quarter: (start_date, end_date)} where dates are
+                       datetime objects or strings parseable by pd.to_datetime
+
+    Returns:
+        dict of {calendar_quarter: {chip: np.array of samples}}
+        Calendar quarters are named like 'Q1 2024', 'Q2 2024', etc.
+    """
+    # Parse quarter dates
+    fiscal_quarters = []
+    for quarter in quarterly_results.keys():
+        start, end = quarter_dates[quarter]
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+        fiscal_quarters.append({
+            'quarter': quarter,
+            'start': start,
+            'end': end,
+            'days': (end - start).days + 1
+        })
+
+    # Get chip types and n_samples from first quarter
+    first_quarter = fiscal_quarters[0]['quarter']
+    chip_types = list(quarterly_results[first_quarter].keys())
+    n_samples = len(quarterly_results[first_quarter][chip_types[0]])
+
+    # Determine the range of calendar quarters we need
+    all_dates = []
+    for fq in fiscal_quarters:
+        all_dates.extend([fq['start'], fq['end']])
+    min_date, max_date = min(all_dates), max(all_dates)
+
+    # Generate all calendar quarters in the range
+    calendar_quarters = []
+    current = datetime(min_date.year, ((min_date.month - 1) // 3) * 3 + 1, 1)
+    while current <= max_date:
+        cal_q = _get_calendar_quarter(current)
+        if cal_q not in calendar_quarters:
+            calendar_quarters.append(cal_q)
+        # Move to next quarter
+        if current.month >= 10:
+            current = datetime(current.year + 1, 1, 1)
+        else:
+            current = datetime(current.year, current.month + 3, 1)
+
+    # Build overlap mapping: calendar_quarter -> [(fiscal_quarter, fraction), ...]
+    calendar_map = {}
+    for cq in calendar_quarters:
+        cq_start, cq_end = _get_calendar_quarter_bounds(cq)
+        overlaps = []
+        for fq in fiscal_quarters:
+            days_overlap = _days_overlap(fq['start'], fq['end'], cq_start, cq_end)
+            if days_overlap > 0:
+                pct_of_fq = days_overlap / fq['days']
+                overlaps.append({
+                    'fiscal_quarter': fq['quarter'],
+                    'pct_of_fiscal_quarter': pct_of_fq,
+                })
+        calendar_map[cq] = overlaps
+
+    # Initialize results with zero arrays
+    calendar_results = {
+        cq: {chip: np.zeros(n_samples) for chip in chip_types}
+        for cq in calendar_quarters
+    }
+
+    # Interpolate: weight each sample by the overlap fraction
+    for cq, overlaps in calendar_map.items():
+        for overlap in overlaps:
+            fq_name = overlap['fiscal_quarter']
+            fraction = overlap['pct_of_fiscal_quarter']
+            for chip in chip_types:
+                calendar_results[cq][chip] += quarterly_results[fq_name][chip] * fraction
+
+    return calendar_results
+
+
+def compute_running_totals(quarterly_results):
+    """
+    Compute running totals from per-quarter results.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+
+    Returns:
+        dict of {quarter: {chip: np.array of cumulative samples up to and including that quarter}}
+    """
+    quarters = list(quarterly_results.keys())
+    chip_types = list(quarterly_results[quarters[0]].keys())
+    n_samples = len(quarterly_results[quarters[0]][chip_types[0]])
+
+    running_totals = {}
+    cumulative = {chip: np.zeros(n_samples) for chip in chip_types}
+
+    for quarter in quarters:
+        for chip in chip_types:
+            cumulative[chip] = cumulative[chip] + quarterly_results[quarter][chip]
+        running_totals[quarter] = {chip: cumulative[chip].copy() for chip in chip_types}
+
+    return running_totals
 
 
 def verify_calendar_quarter_interpolation(sim_results, calendar_results, quarter_dates, verbose=True):
