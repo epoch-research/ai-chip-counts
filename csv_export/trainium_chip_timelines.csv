@@ -1,0 +1,9 @@
+Name,Chip manufacturer,Start date,End date,Compute estimate in H100e (median),H100e (5th percentile),H100e (95th percentile),Number of Units,Number of Units (5th percentile),Number of Units (95th percentile),Source / Link,Notes,Chip type,Last Modified By,Last Modified
+Q1 2024 - Trainium2,Amazon,1/1/2024,3/31/2024,,,,12858,6743,23176,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q2 2024 - Trainium2,Amazon,4/1/2024,6/30/2024,,,,31502,19060,48625,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q3 2024 - Trainium2,Amazon,7/1/2024,9/30/2024,,,,77321,50527,107169,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q4 2024 - Trainium2,Amazon,10/1/2024,12/31/2024,,,,188975,123139,264045,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q1 2025 - Trainium2,Amazon,1/1/2025,3/31/2025,,,,212617,179592,250086,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q2 2025 - Trainium2,Amazon,4/1/2025,6/30/2025,,,,247436,213307,285215,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q3 2025 - Trainium2,Amazon,7/1/2025,9/30/2025,,,,287852,249316,330480,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
+Q4 2025 - Trainium2,Amazon,10/1/2025,12/31/2025,,,,334936,286911,390528,,Estimates generated on: 02-13-2026 13:25,Trainium2,,
