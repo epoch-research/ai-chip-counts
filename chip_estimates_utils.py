@@ -849,3 +849,183 @@ def verify_calendar_quarter_interpolation(sim_results, calendar_results, quarter
         print(f"\n{'All checks passed!' if all_passed else 'Some checks FAILED!'}")
 
     return all_passed
+
+
+# ===============================
+# Nvidia ownership CSV exports
+# ===============================
+
+def _calendar_quarter_date_strings(cal_q):
+    """Return (start_date, end_date) as M/D/YYYY strings for a calendar quarter like 'Q1 2024'."""
+    parts = cal_q.split()
+    q_num = int(parts[0][1])
+    year = int(parts[1])
+    starts = {1: f"1/1/{year}", 2: f"4/1/{year}", 3: f"7/1/{year}", 4: f"10/1/{year}"}
+    ends = {1: f"3/31/{year}", 2: f"6/30/{year}", 3: f"9/30/{year}", 4: f"12/31/{year}"}
+    return starts[q_num], ends[q_num]
+
+
+def _h100e_total_samples(chip_samples, chip_specs, h100_tops):
+    """Sum H100e across all chips for one quarter. chip_samples: {chip: np.array}."""
+    total = None
+    for chip, samples in chip_samples.items():
+        if chip in chip_specs:
+            h100e = samples * (chip_specs[chip]['tops'] / h100_tops)
+            total = h100e if total is None else total + h100e
+    return total
+
+
+def _owner_unit_samples(owner, cq, chip, hyperscalers, owner_data, total_data):
+    """Get unit samples for an owner/quarter/chip, computing 'Other' as total minus hyperscalers."""
+    if owner == 'Other':
+        hyperscaler_sum = sum(owner_data[c][cq][chip] for c in hyperscalers)
+        return total_data[cq][chip] - hyperscaler_sum
+    return owner_data[owner][cq][chip]
+
+
+def _percentile_row(samples, prefix=''):
+    """Extract p5/p50/p95 from samples into a dict with standard column names."""
+    p5, p50, p95 = [int(np.percentile(samples, p)) for p in [5, 50, 95]]
+    return {
+        f'{prefix}Compute estimate in H100e (median)': None,  # placeholder, overwritten below
+        f'{prefix}H100e (5th percentile)': None,
+        f'{prefix}H100e (95th percentile)': None,
+        f'{prefix}Number of Units': p50,
+        f'{prefix}Number of Units (5th percentile)': p5,
+        f'{prefix}Number of Units (95th percentile)': p95,
+    }
+
+
+def export_nvidia_ownership_csvs(
+    calendar_quarters, hyperscalers, all_owners, chip_types, chip_specs, h100_tops,
+    hyperscaler_calendar_quarterly, hyperscaler_calendar_running,
+    total_calendar_running,
+    output_dir='owners_csv_export',
+):
+    """
+    Export three ownership CSVs from calendar-quarter sample data.
+
+    Writes:
+      1. {output_dir}/nvidia_ownership_timelines.csv — per-quarter flow by hyperscaler
+      2. {output_dir}/nvidia_ownership_cumulative.csv — cumulative by hyperscaler
+      3. {output_dir}/nvidia_ownership_cumulative_by_chip.csv — cumulative by owner × chip
+
+    Returns:
+        (timelines_df, cumulative_df, cumulative_by_chip_df)
+    """
+    from datetime import datetime as _dt
+    timestamp = _dt.now().strftime("%m-%d-%Y %H:%M")
+
+    def _base_row(name, owner, cq):
+        start_date, end_date = _calendar_quarter_date_strings(cq)
+        return {
+            'Name': name,
+            'Chip manufacturer': 'Nvidia',
+            'Owner': owner,
+            'Start date': start_date,
+            'End date': end_date,
+        }
+
+    def _tail_cols():
+        return {
+            'Source / Link': '',
+            'Notes': f'Estimates generated on: {timestamp}',
+            'Last Modified By': '',
+            'Last Modified': '',
+        }
+
+    # --- 1. Per-quarter timelines (hyperscalers only, aggregated across chips) ---
+    timeline_rows = []
+    for cq in calendar_quarters:
+        for company in hyperscalers:
+            unit_samples = sum(
+                hyperscaler_calendar_quarterly[company][cq][chip] for chip in chip_types
+            )
+            h100e_samples = _h100e_total_samples(
+                hyperscaler_calendar_quarterly[company][cq], chip_specs, h100_tops
+            )
+            row = _base_row(f"{company} {cq}", company, cq)
+            p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+            p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+            row.update({
+                'Compute estimate in H100e (median)': p50_h,
+                'H100e (5th percentile)': p5_h,
+                'H100e (95th percentile)': p95_h,
+                'Number of Units': p50_u,
+                'Number of Units (5th percentile)': p5_u,
+                'Number of Units (95th percentile)': p95_u,
+            })
+            row.update(_tail_cols())
+            timeline_rows.append(row)
+
+    # --- 2. Cumulative totals (hyperscalers only, aggregated across chips) ---
+    cumulative_rows = []
+    for cq in calendar_quarters:
+        for company in hyperscalers:
+            unit_samples = sum(
+                hyperscaler_calendar_running[company][cq][chip] for chip in chip_types
+            )
+            h100e_samples = _h100e_total_samples(
+                hyperscaler_calendar_running[company][cq], chip_specs, h100_tops
+            )
+            row = _base_row(f"{company} cumulative through {cq}", company, cq)
+            p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+            p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+            row.update({
+                'Compute estimate in H100e (median)': p50_h,
+                'H100e (5th percentile)': p5_h,
+                'H100e (95th percentile)': p95_h,
+                'Number of Units': p50_u,
+                'Number of Units (5th percentile)': p5_u,
+                'Number of Units (95th percentile)': p95_u,
+            })
+            row.update(_tail_cols())
+            cumulative_rows.append(row)
+
+    # --- 3. Cumulative by chip type (all owners including 'Other') ---
+    by_chip_rows = []
+    for cq in calendar_quarters:
+        for chip in chip_types:
+            if chip not in chip_specs:
+                continue
+            h100e_mult = chip_specs[chip]['tops'] / h100_tops
+            for owner in all_owners:
+                unit_samples = _owner_unit_samples(
+                    owner, cq, chip, hyperscalers,
+                    hyperscaler_calendar_running, total_calendar_running,
+                )
+                p50_units = int(np.percentile(unit_samples, 50))
+                if p50_units == 0:
+                    continue
+                h100e_samples = unit_samples * h100e_mult
+                row = _base_row(f"{owner} {chip} cumulative through {cq}", owner, cq)
+                p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+                p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+                row.update({
+                    'Compute estimate in H100e (median)': p50_h,
+                    'H100e (5th percentile)': p5_h,
+                    'H100e (95th percentile)': p95_h,
+                    'Number of Units': p50_u,
+                    'Number of Units (5th percentile)': p5_u,
+                    'Number of Units (95th percentile)': p95_u,
+                })
+                tail = _tail_cols()
+                # Insert Chip type before the trailing columns
+                row['Chip type'] = chip
+                row.update(tail)
+                by_chip_rows.append(row)
+
+    # Write CSVs
+    timelines_df = pd.DataFrame(timeline_rows)
+    cumulative_df = pd.DataFrame(cumulative_rows)
+    by_chip_df = pd.DataFrame(by_chip_rows)
+
+    timelines_df.to_csv(f'{output_dir}/nvidia_ownership_timelines.csv', index=False)
+    cumulative_df.to_csv(f'{output_dir}/nvidia_ownership_cumulative.csv', index=False)
+    by_chip_df.to_csv(f'{output_dir}/nvidia_ownership_cumulative_by_chip.csv', index=False)
+
+    print(f"Exported {len(timelines_df)} rows to {output_dir}/nvidia_ownership_timelines.csv")
+    print(f"Exported {len(cumulative_df)} rows to {output_dir}/nvidia_ownership_cumulative.csv")
+    print(f"Exported {len(by_chip_df)} rows to {output_dir}/nvidia_ownership_cumulative_by_chip.csv")
+
+    return timelines_df, cumulative_df, by_chip_df
