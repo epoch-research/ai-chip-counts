@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import squigglepy as sq
 from datetime import datetime
 
 # Warn (not error) on invalid operations like NaN
@@ -63,6 +64,8 @@ def estimate_cumulative_chip_sales(
     sample_base_price,
     get_deflation_factor=None,
     sample_revenue_uncertainty=None,
+    price_correlation=None,
+    base_price_distributions=None,
     n_samples=5000,
 ):
     """
@@ -87,6 +90,15 @@ def estimate_cumulative_chip_sales(
             Sampled once and applied to all quarters. Use this to model correlated uncertainty
             in revenue estimates (e.g., lambda: sq.to(0.9, 1.1) @ 1 if revenue could be 10% off
             in either direction, consistently across quarters). If None, no multiplier applied.
+        price_correlation: float or correlation matrix, optional. If provided, applies rank
+            correlation across chip types' base price samples using sq.correlate. A float
+            (e.g. 0.6) sets uniform pairwise correlation; a matrix allows per-pair control.
+            Requires base_price_distributions to be set. This widens aggregate confidence
+            intervals by preventing independent price draws from canceling out.
+        base_price_distributions: dict of {chip: squigglepy distribution}, optional.
+            Required when price_correlation is set. Maps each chip type to its base price
+            distribution (e.g. BASE_PRICES dict). Used with sq.correlate to generate
+            correlated price samples directly from the distributions.
         n_samples: number of Monte Carlo samples
 
     Returns:
@@ -97,16 +109,28 @@ def estimate_cumulative_chip_sales(
     Note on correlations:
         - Prices are sampled once per chip type and reused (with deflation) across all quarters.
           This means if we sample a "high price world", that persists for the entire simulation.
+        - If price_correlation is set, prices are also correlated across chip types, so a
+          "high price world" for one chip tends to be high for others too.
         - Revenue uncertainty (if provided) is sampled once and applied to all quarters.
         - Revenue and production mix shares are sampled independently each quarter.
     """
     # === PRESAMPLE CORRELATED PARAMS ===
 
-    # Prices: sample once per chip
-    base_price_samples = {
-        chip: np.array([sample_base_price(chip) for _ in range(n_samples)])
-        for chip in chip_types
-    }
+    # Prices: sample once per chip, with optional cross-chip correlation via sq.correlate
+    if price_correlation is not None:
+        if base_price_distributions is None:
+            raise ValueError("base_price_distributions is required when price_correlation is set")
+        dists = tuple(base_price_distributions[chip] for chip in chip_types)
+        correlated_dists = sq.correlate(dists, price_correlation)
+        base_price_samples = {
+            chip: np.array(correlated_dists[i] @ n_samples)
+            for i, chip in enumerate(chip_types)
+        }
+    else:
+        base_price_samples = {
+            chip: np.array([sample_base_price(chip) for _ in range(n_samples)])
+            for chip in chip_types
+        }
 
     # Revenue uncertainty (if provided)
     rev_multiplier = np.array([sample_revenue_uncertainty() for _ in range(n_samples)]) if sample_revenue_uncertainty else np.ones(n_samples)
@@ -899,19 +923,22 @@ def _percentile_row(samples, prefix=''):
 def export_nvidia_ownership_csvs(
     calendar_quarters, hyperscalers, all_owners, chip_types, chip_specs, h100_tops,
     hyperscaler_calendar_quarterly, hyperscaler_calendar_running,
-    total_calendar_running,
+    total_calendar_running, total_calendar_quarterly=None,
     output_dir='owners_csv_export',
 ):
     """
-    Export three ownership CSVs from calendar-quarter sample data.
+    Export ownership CSVs from calendar-quarter sample data.
 
     Writes:
       1. {output_dir}/nvidia_ownership_timelines.csv — per-quarter flow by hyperscaler
       2. {output_dir}/nvidia_ownership_cumulative.csv — cumulative by hyperscaler
       3. {output_dir}/nvidia_ownership_cumulative_by_chip.csv — cumulative by owner × chip
+      4. {output_dir}/nvidia_ownership_timelines_by_chip.csv — per-quarter flow by owner × chip
+         (only written if total_calendar_quarterly is provided)
 
     Returns:
-        (timelines_df, cumulative_df, cumulative_by_chip_df)
+        (timelines_df, cumulative_df, cumulative_by_chip_df, timelines_by_chip_df)
+        timelines_by_chip_df is None if total_calendar_quarterly is not provided.
     """
     from datetime import datetime as _dt
     timestamp = _dt.now().strftime("%m-%d-%Y %H:%M")
@@ -1015,10 +1042,56 @@ def export_nvidia_ownership_csvs(
                 row.update(tail)
                 by_chip_rows.append(row)
 
+    # --- 4. Per-quarter timelines by chip type (all owners including 'Other') ---
+    timelines_by_chip_df = None
+    if total_calendar_quarterly is not None:
+        timeline_by_chip_rows = []
+        for cq in calendar_quarters:
+            for chip in chip_types:
+                if chip not in chip_specs:
+                    continue
+                h100e_mult = chip_specs[chip]['tops'] / h100_tops
+                for owner in all_owners:
+                    # Get per-quarter (flow) unit samples for this owner/chip
+                    if owner == 'Other':
+                        hyperscaler_sum = sum(
+                            hyperscaler_calendar_quarterly[c][cq][chip] for c in hyperscalers
+                        )
+                        unit_samples = total_calendar_quarterly[cq][chip] - hyperscaler_sum
+                    else:
+                        unit_samples = hyperscaler_calendar_quarterly[owner][cq][chip]
+                    p50_units = int(np.percentile(unit_samples, 50))
+                    if p50_units == 0:
+                        continue
+                    h100e_samples = unit_samples * h100e_mult
+                    row = _base_row(f"{owner} {chip} {cq}", owner, cq)
+                    p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+                    p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+                    row.update({
+                        'Compute estimate in H100e (median)': p50_h,
+                        'H100e (5th percentile)': p5_h,
+                        'H100e (95th percentile)': p95_h,
+                        'Number of Units': p50_u,
+                        'Number of Units (5th percentile)': p5_u,
+                        'Number of Units (95th percentile)': p95_u,
+                    })
+                    tail = _tail_cols()
+                    row['Chip type'] = chip
+                    row.update(tail)
+                    timeline_by_chip_rows.append(row)
+        timelines_by_chip_df = pd.DataFrame(timeline_by_chip_rows)
+
     # Write CSVs
     timelines_df = pd.DataFrame(timeline_rows)
     cumulative_df = pd.DataFrame(cumulative_rows)
     by_chip_df = pd.DataFrame(by_chip_rows)
+
+    # Remap "Other" to a more descriptive label in exported CSVs
+    _other_label = 'Other (ex-Big 4 hyperscalers)'
+    for df in [by_chip_df, timelines_by_chip_df]:
+        if df is not None:
+            df['Owner'] = df['Owner'].replace('Other', _other_label)
+            df['Name'] = df['Name'].str.replace('Other', _other_label, regex=False)
 
     timelines_df.to_csv(f'{output_dir}/nvidia_ownership_timelines.csv', index=False)
     cumulative_df.to_csv(f'{output_dir}/nvidia_ownership_cumulative.csv', index=False)
@@ -1028,4 +1101,8 @@ def export_nvidia_ownership_csvs(
     print(f"Exported {len(cumulative_df)} rows to {output_dir}/nvidia_ownership_cumulative.csv")
     print(f"Exported {len(by_chip_df)} rows to {output_dir}/nvidia_ownership_cumulative_by_chip.csv")
 
-    return timelines_df, cumulative_df, by_chip_df
+    if timelines_by_chip_df is not None:
+        timelines_by_chip_df.to_csv(f'{output_dir}/nvidia_ownership_timelines_by_chip.csv', index=False)
+        print(f"Exported {len(timelines_by_chip_df)} rows to {output_dir}/nvidia_ownership_timelines_by_chip.csv")
+
+    return timelines_df, cumulative_df, by_chip_df, timelines_by_chip_df

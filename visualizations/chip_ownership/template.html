@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chip Ownership by Company</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; padding: 20px; background: #f5f5f5;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
+        .view-tabs {
+            display: flex; justify-content: center; gap: 0;
+            margin-bottom: 20px;
+        }
+        .view-tab {
+            padding: 10px 20px; border: 1px solid #ccc; cursor: pointer;
+            font-size: 14px; font-weight: 500; background: #e8e8e8; color: #555;
+        }
+        .view-tab:first-child { border-radius: 8px 0 0 8px; }
+        .view-tab:last-child { border-radius: 0 8px 8px 0; }
+        .view-tab + .view-tab { border-left: none; }
+        .view-tab.active {
+            background: #1a73e8; color: white; border-color: #1a73e8;
+            font-weight: 600; box-shadow: 0 2px 8px rgba(26, 115, 232, 0.4);
+        }
+        .controls {
+            display: flex; justify-content: center; gap: 10px;
+            margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex; align-items: center; gap: 10px;
+            background: white; padding: 10px 15px; border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .control-group label { font-weight: 500; color: #555; }
+        select {
+            padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 14px; cursor: pointer;
+        }
+        select:hover { border-color: #999; }
+        button {
+            padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px;
+            font-size: 14px; cursor: pointer; background: #e8e8e8; color: #555;
+        }
+        button:hover { background: #d0d0d0; }
+        button.active {
+            background: #1a73e8; color: white; border: 1px solid #1a73e8;
+            font-weight: 600; box-shadow: 0 2px 8px rgba(26, 115, 232, 0.4);
+        }
+        .owner-filters {
+            display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+        }
+        .owner-toggle {
+            padding: 6px 12px; border: 1px solid #ccc; border-radius: 16px;
+            font-size: 13px; cursor: pointer; background: #e8e8e8; color: #555;
+            transition: all 0.15s;
+        }
+        .owner-toggle.active {
+            background: #333; color: white; border-color: #333;
+        }
+        .chart-container {
+            background: white; border-radius: 12px; padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 18px; font-weight: 600; color: #333;
+            margin-bottom: 15px; text-align: center;
+        }
+        .table-container {
+            background: white; border-radius: 12px; padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%; border-collapse: collapse; font-size: 13px;
+        }
+        thead th {
+            background: #f8f9fa; border-bottom: 2px solid #dee2e6;
+            padding: 10px 12px; text-align: right; font-weight: 600;
+            color: #495057; position: sticky; top: 0; white-space: nowrap;
+        }
+        thead th:first-child { text-align: left; }
+        tbody td {
+            padding: 8px 12px; border-bottom: 1px solid #eee;
+            text-align: right; color: #333;
+        }
+        tbody td:first-child { text-align: left; font-weight: 500; }
+        tbody tr:hover { background: #f8f9fa; }
+        tbody tr.total-row {
+            font-weight: 700; border-top: 2px solid #dee2e6;
+            background: #f1f3f5;
+        }
+        .chip-dot {
+            display: inline-block; width: 10px; height: 10px;
+            border-radius: 50%; margin-right: 6px; vertical-align: middle;
+        }
+        .ci-range { color: #888; font-size: 11px; }
+        .custom-legend {
+            display: flex; flex-wrap: wrap; gap: 8px 20px;
+            justify-content: center; padding: 10px 0; font-size: 12px;
+        }
+        .legend-group {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #f8f9fa; padding: 4px 10px; border-radius: 6px;
+        }
+        .legend-group-label {
+            font-weight: 600; color: #444; margin-right: 2px; white-space: nowrap;
+        }
+        .legend-swatch {
+            display: inline-block; width: 11px; height: 11px;
+            border-radius: 2px; vertical-align: middle;
+        }
+        .legend-item {
+            display: inline-flex; align-items: center; gap: 2px;
+            color: #555; white-space: nowrap;
+        }
+        .toggle-label {
+            display: flex; align-items: center; gap: 10px;
+            cursor: pointer; font-weight: 500; color: #555; user-select: none;
+        }
+        .toggle-switch {
+            display: inline-block; width: 36px; height: 20px; border-radius: 10px;
+            background: #ccc; position: relative; transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 16px; height: 16px; border-radius: 50%; background: white;
+            transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.active { background: #1a73e8; }
+        .toggle-switch.active::after { transform: translateX(16px); }
+        .chip-breakdown { font-size: 11px; color: #666; line-height: 1.4; margin-top: 2px; }
+        .chip-breakdown-line { display: flex; align-items: center; gap: 4px; }
+        .methodology {
+            background: white; border-radius: 12px; padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;
+            font-size: 12px; color: #666; line-height: 1.6;
+        }
+        .methodology h3 { font-size: 14px; color: #333; margin: 0 0 8px 0; }
+        .methodology p { margin: 0 0 6px 0; }
+        .methodology p:last-child { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cumulative Chip Ownership by Company</h1>
+        <p class="subtitle">Estimated chip allocations by owner (Nvidia GPUs + Google TPUs), with 90% credible intervals</p>
+
+        <div class="view-tabs">
+            <div class="view-tab active" onclick="setView('snapshot')">Snapshot</div>
+            <div class="view-tab" onclick="setView('cumulative')">Cumulative Over Time</div>
+            <div class="view-tab" onclick="setView('flow')">Per Quarter</div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group" id="quarter-control">
+                <label>Through:</label>
+                <select id="quarter-select" onchange="updateAll()"></select>
+            </div>
+            <div class="control-group" id="owner-control" style="display:none">
+                <label>Owners:</label>
+                <div class="owner-filters" id="owner-filters"></div>
+            </div>
+            <div class="control-group">
+                <label>Metric:</label>
+                <button id="btn-h100e" onclick="setMetric('h100e')">H100e</button>
+                <button id="btn-units" onclick="setMetric('units')">Units</button>
+            </div>
+            <div class="control-group" id="stack-control" style="display:none">
+                <label>Layout:</label>
+                <button id="btn-grouped" onclick="setStacking('grouped')">Grouped</button>
+                <button id="btn-stacked" onclick="setStacking('stacked')">Stacked</button>
+            </div>
+            <div class="control-group" id="breakdown-control" style="display:none">
+                <label class="toggle-label" onclick="toggleChipBreakdown()">
+                    <span class="toggle-switch" id="chip-toggle"></span>
+                    Break down by chip type
+                </label>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title" id="chart-title"></div>
+            <canvas id="mainChart"></canvas>
+            <div id="custom-legend" class="custom-legend"></div>
+        </div>
+
+        <div class="table-container">
+            <div class="chart-title" id="table-title"></div>
+            <div id="table-wrapper"></div>
+        </div>
+
+        <div class="methodology">
+            <h3>Methodology</h3>
+            <p>
+                All estimates use Monte Carlo simulation (5,000 samples) to propagate uncertainty.
+            </p>
+            <p>
+                <strong>Nvidia GPUs:</strong> Chip volumes are estimated from Nvidia's quarterly
+                datacenter revenue, split by chip type using revenue share data, then divided by
+                per-chip prices. Owner allocations are based on analyst estimates of each company's
+                share of Nvidia datacenter revenue.
+            </p>
+            <p>
+                <strong>Google TPUs:</strong> TPU volumes are estimated from Broadcom's quarterly
+                revenue attributed to Google's custom silicon program, split by TPU version using
+                production mix estimates, then divided by per-chip manufacturing costs adjusted
+                for Broadcom's margin.
+            </p>
+            <p>
+                <strong>H100e conversion:</strong> Units &times; (chip INT8 TOPS / 1,979),
+                where 1,979 is the H100's 8-bit TOPS rating.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const DATA = __PLACEHOLDER_viz_json__;
+        const COLORS = __PLACEHOLDER_colors_json__;
+        const OWNERS = __PLACEHOLDER_owners_json__;
+        const CHIPS = __PLACEHOLDER_chips_json__;
+        const QUARTERS = __PLACEHOLDER_quarters_json__;
+
+        // Distinct colors per owner for the time-series views
+        const OWNER_COLORS = {};
+        const OWNER_PALETTE = ['#F25022', '#0668E1', '#FF9900', '#34A853', '#808080'];
+        OWNERS.forEach((o, i) => { OWNER_COLORS[o] = OWNER_PALETTE[i % OWNER_PALETTE.length]; });
+
+        // Owner-specific chip colors: shades of each owner's base hue
+        const OWNER_BASE_HUES = [4, 215, 33, 140, 0];
+        const OWNER_BASE_SATS = [88, 85, 100, 55, 0];
+        const OWNER_CHIP_COLORS = {};
+        OWNERS.forEach((owner, i) => {
+            OWNER_CHIP_COLORS[owner] = {};
+            const h = OWNER_BASE_HUES[i % 5];
+            const s = OWNER_BASE_SATS[i % 5];
+            const n = CHIPS.length;
+            CHIPS.forEach((chip, j) => {
+                const l = 72 - (j / Math.max(n - 1, 1)) * 40;
+                OWNER_CHIP_COLORS[owner][chip] = `hsl(${h}, ${s}%, ${l}%)`;
+            });
+        });
+
+        let currentMetric = 'h100e';
+        let currentView = 'snapshot';
+        let currentStacking = 'stacked';
+        let currentBreakdown = 'owner';
+        let selectedOwners = new Set(OWNERS);
+        let chart = null;
+
+        // Populate quarter dropdown
+        const quarterSelect = document.getElementById('quarter-select');
+        QUARTERS.forEach(q => {
+            const opt = document.createElement('option');
+            opt.value = q; opt.textContent = q;
+            quarterSelect.appendChild(opt);
+        });
+        quarterSelect.value = QUARTERS[QUARTERS.length - 1];
+
+        // Populate owner toggle buttons
+        const ownerFilters = document.getElementById('owner-filters');
+        OWNERS.forEach(owner => {
+            const btn = document.createElement('div');
+            btn.className = 'owner-toggle active';
+            btn.textContent = owner;
+            btn.dataset.owner = owner;
+            btn.onclick = () => {
+                if (selectedOwners.has(owner)) {
+                    // Don't allow deselecting all
+                    if (selectedOwners.size > 1) {
+                        selectedOwners.delete(owner);
+                        btn.classList.remove('active');
+                    }
+                } else {
+                    selectedOwners.add(owner);
+                    btn.classList.add('active');
+                }
+                updateAll();
+            };
+            ownerFilters.appendChild(btn);
+        });
+
+        function setView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', ['snapshot', 'cumulative', 'flow'][i] === view);
+            });
+            // Show/hide controls based on view
+            document.getElementById('quarter-control').style.display =
+                view === 'snapshot' ? '' : 'none';
+            document.getElementById('owner-control').style.display =
+                view === 'snapshot' ? 'none' : '';
+            document.getElementById('stack-control').style.display =
+                view === 'snapshot' ? 'none' : '';
+            document.getElementById('breakdown-control').style.display =
+                view === 'snapshot' ? 'none' : '';
+            updateAll();
+        }
+
+        function setMetric(metric) {
+            currentMetric = metric;
+            document.getElementById('btn-h100e').classList.toggle('active', metric === 'h100e');
+            document.getElementById('btn-units').classList.toggle('active', metric === 'units');
+            updateAll();
+        }
+
+        function setStacking(mode) {
+            currentStacking = mode;
+            document.getElementById('btn-grouped').classList.toggle('active', mode === 'grouped');
+            document.getElementById('btn-stacked').classList.toggle('active', mode === 'stacked');
+            updateAll();
+        }
+
+        function toggleChipBreakdown() {
+            currentBreakdown = currentBreakdown === 'chip' ? 'owner' : 'chip';
+            document.getElementById('chip-toggle').classList.toggle('active', currentBreakdown === 'chip');
+            updateAll();
+        }
+
+        function buildCustomLegend(owners, datasets) {
+            const legendDiv = document.getElementById('custom-legend');
+            let html = '';
+            owners.forEach(owner => {
+                const ownerDatasets = datasets.filter(d => d._owner === owner);
+                if (ownerDatasets.length === 0) return;
+                html += '<div class="legend-group">';
+                html += `<span class="legend-group-label">${owner}:</span>`;
+                ownerDatasets.forEach(d => {
+                    html += `<span class="legend-item"><span class="legend-swatch" style="background:${d.backgroundColor}"></span>${d._chip}</span>`;
+                });
+                html += '</div>';
+            });
+            legendDiv.innerHTML = html;
+        }
+
+        function formatNum(v) {
+            if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+            if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K';
+            return v.toString();
+        }
+
+        function getDataSource() {
+            return currentView === 'flow' ? DATA.flow : DATA.cumulative;
+        }
+
+        function getGrandTotal(qData) {
+            let total = 0;
+            OWNERS.forEach(owner => {
+                const ownerData = qData[owner] || {};
+                Object.values(ownerData).forEach(entry => {
+                    total += entry[currentMetric][1];
+                });
+            });
+            return total;
+        }
+
+        function getOwnerTotal(qData, owner) {
+            let total = 0;
+            const ownerData = qData[owner] || {};
+            Object.values(ownerData).forEach(entry => {
+                total += entry[currentMetric][1];
+            });
+            return total;
+        }
+
+        function updateAll() {
+            updateChart();
+            updateTable();
+        }
+
+        // ========================
+        // SNAPSHOT VIEW (stacked bars, one quarter)
+        // ========================
+        function updateSnapshotChart() {
+            document.getElementById('custom-legend').innerHTML = '';
+            const quarter = quarterSelect.value;
+            const src = getDataSource();
+            const qData = src[quarter] || {};
+            const metricLabel = currentMetric === 'h100e' ? 'H100e' : 'Units';
+            const grandTotal = getGrandTotal(qData);
+
+            document.getElementById('chart-title').textContent =
+                `Cumulative ${metricLabel} by Owner (through ${quarter})`;
+
+            const datasets = [];
+            CHIPS.forEach(chip => {
+                const values = [];
+                const ciData = [];
+                let hasAny = false;
+                OWNERS.forEach(owner => {
+                    const entry = (qData[owner] || {})[chip];
+                    if (entry) {
+                        const vals = entry[currentMetric];
+                        values.push(vals[1]);
+                        ciData.push({ p5: vals[0], p50: vals[1], p95: vals[2] });
+                        hasAny = true;
+                    } else {
+                        values.push(0);
+                        ciData.push({ p5: 0, p50: 0, p95: 0 });
+                    }
+                });
+                if (hasAny) {
+                    datasets.push({
+                        label: chip,
+                        data: values,
+                        backgroundColor: COLORS[chip] || '#999',
+                        borderColor: COLORS[chip] || '#999',
+                        borderWidth: 1,
+                        ciData: ciData
+                    });
+                }
+            });
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: OWNERS, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: true, aspectRatio: 2,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => OWNERS[items[0].dataIndex],
+                                label: (ctx) => {
+                                    const ci = ctx.dataset.ciData[ctx.dataIndex];
+                                    if (ci.p50 === 0) return null;
+                                    const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                    return `${ctx.dataset.label}: ${formatNum(ci.p50)}${u} (90% CI: ${formatNum(ci.p5)}\u2013${formatNum(ci.p95)})`;
+                                },
+                                afterBody: (items) => {
+                                    const owner = OWNERS[items[0].dataIndex];
+                                    const ownerTotal = getOwnerTotal(qData, owner);
+                                    const pct = grandTotal > 0 ? (ownerTotal / grandTotal * 100).toFixed(1) : '0.0';
+                                    const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                    return ['', `Total: ${formatNum(ownerTotal)}${u} (${pct}% of all owners)`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: {
+                            stacked: true, beginAtZero: true,
+                            ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v },
+                            title: { display: true, text: currentMetric === 'h100e' ? 'Cumulative H100e' : 'Cumulative Units' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ========================
+        // TIME-SERIES VIEWS (grouped bars across quarters)
+        // ========================
+        function updateTimeSeriesChart() {
+            const src = getDataSource();
+            const isCumulative = currentView === 'cumulative';
+            const metricLabel = currentMetric === 'h100e' ? 'H100e' : 'Units';
+            const viewLabel = isCumulative ? 'Cumulative' : 'Per-Quarter';
+
+            document.getElementById('chart-title').textContent =
+                `${viewLabel} ${metricLabel} by Owner Over Time`;
+
+            const owners = OWNERS.filter(o => selectedOwners.has(o));
+            const byChip = currentBreakdown === 'chip';
+            const isStacked = currentStacking === 'stacked';
+            const scaleStacked = isStacked || byChip;
+
+            let datasets;
+
+            if (byChip) {
+                // One dataset per (owner, chip) combination
+                datasets = [];
+                owners.forEach(owner => {
+                    CHIPS.forEach(chip => {
+                        const data = [];
+                        const ciData = [];
+                        let hasAny = false;
+                        QUARTERS.forEach(q => {
+                            const entry = ((src[q] || {})[owner] || {})[chip];
+                            if (entry) {
+                                const vals = entry[currentMetric];
+                                data.push(vals[1]);
+                                ciData.push({ p5: vals[0], p50: vals[1], p95: vals[2] });
+                                if (vals[1] > 0) hasAny = true;
+                            } else {
+                                data.push(0);
+                                ciData.push({ p5: 0, p50: 0, p95: 0 });
+                            }
+                        });
+                        if (hasAny) {
+                            datasets.push({
+                                label: `${owner} \u2013 ${chip}`,
+                                data: data,
+                                backgroundColor: OWNER_CHIP_COLORS[owner][chip],
+                                borderColor: OWNER_CHIP_COLORS[owner][chip],
+                                borderWidth: 0,
+                                stack: isStacked ? 'stack0' : owner,
+                                _owner: owner,
+                                _chip: chip,
+                                _ciData: ciData,
+                            });
+                        }
+                    });
+                });
+                buildCustomLegend(owners, datasets);
+            } else {
+                // One dataset per owner (aggregated across chips)
+                datasets = owners.map(owner => {
+                    const data = QUARTERS.map(q => {
+                        const qData = src[q] || {};
+                        return getOwnerTotal(qData, owner);
+                    });
+                    return {
+                        label: owner,
+                        data: data,
+                        backgroundColor: OWNER_COLORS[owner],
+                        borderColor: OWNER_COLORS[owner],
+                        borderWidth: 1,
+                    };
+                });
+                document.getElementById('custom-legend').innerHTML = '';
+            }
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: QUARTERS, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: true, aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: !byChip,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].label,
+                                label: (ctx) => {
+                                    const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                    const ds = ctx.dataset;
+                                    if (ds._ciData) {
+                                        const ci = ds._ciData[ctx.dataIndex];
+                                        if (ci.p50 === 0) return null;
+                                        return `${ds.label}: ${formatNum(ci.p50)}${u} (${formatNum(ci.p5)}\u2013${formatNum(ci.p95)})`;
+                                    }
+                                    return `${ds.label}: ${formatNum(ctx.raw)}${u}`;
+                                },
+                                afterBody: (items) => {
+                                    if (byChip) return [];
+                                    // Show chip breakdown in tooltip for "by owner" mode
+                                    const q = QUARTERS[items[0].dataIndex];
+                                    const owner = items[0].dataset.label;
+                                    const qData = (src[q] || {})[owner] || {};
+                                    const lines = [''];
+                                    Object.entries(qData).forEach(([chip, entry]) => {
+                                        const vals = entry[currentMetric];
+                                        if (vals[1] > 0) {
+                                            const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                            lines.push(`  ${chip}: ${formatNum(vals[1])}${u} (${formatNum(vals[0])}\u2013${formatNum(vals[2])})`);
+                                        }
+                                    });
+                                    return lines;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: scaleStacked },
+                        y: {
+                            stacked: scaleStacked, beginAtZero: true,
+                            ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v },
+                            title: { display: true, text: `${viewLabel} ${metricLabel}` }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ========================
+        // CHART ROUTER
+        // ========================
+        function updateChart() {
+            if (currentView === 'snapshot') {
+                updateSnapshotChart();
+            } else {
+                updateTimeSeriesChart();
+            }
+        }
+
+        // ========================
+        // TABLE
+        // ========================
+        function updateSnapshotTable() {
+            const quarter = quarterSelect.value;
+            const src = getDataSource();
+            const qData = src[quarter] || {};
+            const metricLabel = currentMetric === 'h100e' ? 'H100e' : 'Units';
+            const grandTotal = getGrandTotal(qData);
+
+            document.getElementById('table-title').textContent =
+                `Cumulative ${metricLabel} by Owner and Chip Type (through ${quarter})`;
+
+            const activeChips = CHIPS.filter(chip =>
+                OWNERS.some(owner => (qData[owner] || {})[chip])
+            );
+
+            let html = '<table><thead><tr><th>Owner</th>';
+            activeChips.forEach(chip => {
+                html += `<th><span class="chip-dot" style="background:${COLORS[chip] || '#999'}"></span>${chip}</th>`;
+            });
+            html += '<th>Total</th><th>Share</th></tr></thead><tbody>';
+
+            const chipTotals = {};
+            activeChips.forEach(c => { chipTotals[c] = 0; });
+            let allTotal = 0;
+
+            OWNERS.forEach(owner => {
+                const ownerData = qData[owner] || {};
+                let ownerTotal = 0;
+                html += `<tr><td>${owner}</td>`;
+                activeChips.forEach(chip => {
+                    const entry = ownerData[chip];
+                    if (entry) {
+                        const vals = entry[currentMetric];
+                        html += `<td>${formatNum(vals[1])}<br><span class="ci-range">${formatNum(vals[0])}\u2013${formatNum(vals[2])}</span></td>`;
+                        ownerTotal += vals[1];
+                        chipTotals[chip] += vals[1];
+                    } else {
+                        html += '<td>\u2014</td>';
+                    }
+                });
+                allTotal += ownerTotal;
+                const pct = grandTotal > 0 ? (ownerTotal / grandTotal * 100).toFixed(1) : '0.0';
+                html += `<td>${formatNum(ownerTotal)}</td><td>${pct}%</td></tr>`;
+            });
+
+            html += '<tr class="total-row"><td>Total</td>';
+            activeChips.forEach(chip => { html += `<td>${formatNum(chipTotals[chip])}</td>`; });
+            html += `<td>${formatNum(allTotal)}</td><td>100%</td></tr>`;
+            html += '</tbody></table>';
+            document.getElementById('table-wrapper').innerHTML = html;
+        }
+
+        function updateTimeSeriesTable() {
+            const src = getDataSource();
+            const isCumulative = currentView === 'cumulative';
+            const metricLabel = currentMetric === 'h100e' ? 'H100e' : 'Units';
+            const viewLabel = isCumulative ? 'Cumulative' : 'Per-Quarter';
+            const owners = OWNERS.filter(o => selectedOwners.has(o));
+            const byChip = currentBreakdown === 'chip';
+
+            document.getElementById('table-title').textContent =
+                `${viewLabel} ${metricLabel} by Owner Over Time`;
+
+            let html = '<table><thead><tr><th>Quarter</th>';
+            owners.forEach(owner => {
+                html += `<th style="color:${OWNER_COLORS[owner]}">${owner}</th>`;
+            });
+            html += '<th>Total</th></tr></thead><tbody>';
+
+            QUARTERS.forEach(q => {
+                const qData = src[q] || {};
+                let rowTotal = 0;
+                html += `<tr><td>${q}</td>`;
+                owners.forEach(owner => {
+                    const ownerTotal = getOwnerTotal(qData, owner);
+                    rowTotal += ownerTotal;
+                    if (byChip && ownerTotal > 0) {
+                        html += `<td>${formatNum(ownerTotal)}`;
+                        html += '<div class="chip-breakdown">';
+                        const ownerData = qData[owner] || {};
+                        Object.entries(ownerData).forEach(([chip, entry]) => {
+                            const vals = entry[currentMetric];
+                            if (vals[1] > 0) {
+                                html += `<div class="chip-breakdown-line"><span class="legend-swatch" style="background:${OWNER_CHIP_COLORS[owner][chip]}"></span>${chip}: ${formatNum(vals[1])}</div>`;
+                            }
+                        });
+                        html += '</div></td>';
+                    } else {
+                        html += `<td>${ownerTotal > 0 ? formatNum(ownerTotal) : '\u2014'}</td>`;
+                    }
+                });
+                html += `<td>${formatNum(rowTotal)}</td></tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('table-wrapper').innerHTML = html;
+        }
+
+        function updateTable() {
+            if (currentView === 'snapshot') {
+                updateSnapshotTable();
+            } else {
+                updateTimeSeriesTable();
+            }
+        }
+
+        // Initialize
+        setMetric('h100e');
+        setStacking('stacked');
+        // currentBreakdown starts as 'owner' (no chip breakdown by default)
+    </script>
+</body>
+</html>
