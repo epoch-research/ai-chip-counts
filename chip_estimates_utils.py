@@ -879,6 +879,39 @@ def verify_calendar_quarter_interpolation(sim_results, calendar_results, quarter
 # Nvidia ownership CSV exports
 # ===============================
 
+def make_incomplete_note_fn(fiscal_first_start, fiscal_last_end, source_label='Nvidia'):
+    """Create a function that checks if a calendar quarter has incomplete data coverage.
+
+    Args:
+        fiscal_first_start: Start date string of the first fiscal quarter (e.g. '2022-01-31' or '1/31/2022')
+        fiscal_last_end: End date string of the last fiscal quarter
+        source_label: Label for the data source (e.g. 'Nvidia', 'Broadcom')
+
+    Returns:
+        A function(cal_q_start, cal_q_end) -> str or None
+    """
+    import pandas as _pd
+    first_dt = _pd.to_datetime(fiscal_first_start)
+    last_dt = _pd.to_datetime(fiscal_last_end)
+    first_str = f"{first_dt.month}/{first_dt.day}/{first_dt.year}"
+    last_str = f"{last_dt.month}/{last_dt.day}/{last_dt.year}"
+
+    def get_incomplete_note(cal_q_start, cal_q_end):
+        cal_start_dt = _pd.to_datetime(cal_q_start, format='%m/%d/%Y')
+        cal_end_dt = _pd.to_datetime(cal_q_end, format='%m/%d/%Y')
+        starts_before = cal_start_dt < first_dt
+        ends_after = cal_end_dt > last_dt
+        if starts_before and ends_after:
+            return f"Incomplete: based on {source_label} fiscal quarters {first_str} to {last_str}"
+        elif starts_before:
+            return f"Incomplete: based on {source_label} fiscal quarters beginning {first_str}"
+        elif ends_after:
+            return f"Incomplete: based on {source_label} fiscal quarters ending {last_str}"
+        return None
+
+    return get_incomplete_note
+
+
 def _calendar_quarter_date_strings(cal_q):
     """Return (start_date, end_date) as M/D/YYYY strings for a calendar quarter like 'Q1 2024'."""
     parts = cal_q.split()
@@ -920,20 +953,21 @@ def _percentile_row(samples, prefix=''):
     }
 
 
-def export_nvidia_ownership_csvs(
+def export_nvidia_owners_csvs(
     calendar_quarters, hyperscalers, all_owners, chip_types, chip_specs, h100_tops,
     hyperscaler_calendar_quarterly, hyperscaler_calendar_running,
     total_calendar_running, total_calendar_quarterly=None,
     output_dir='owners_csv_export',
+    incomplete_note_fn=None,
 ):
     """
     Export ownership CSVs from calendar-quarter sample data.
 
     Writes:
-      1. {output_dir}/nvidia_ownership_timelines.csv — per-quarter flow by hyperscaler
-      2. {output_dir}/nvidia_ownership_cumulative.csv — cumulative by hyperscaler
-      3. {output_dir}/nvidia_ownership_cumulative_by_chip.csv — cumulative by owner × chip
-      4. {output_dir}/nvidia_ownership_timelines_by_chip.csv — per-quarter flow by owner × chip
+      1. {output_dir}/nvidia_owners_quarters.csv — per-quarter flow by hyperscaler
+      2. {output_dir}/nvidia_owners_cumulative_totals.csv — cumulative by hyperscaler
+      3. {output_dir}/nvidia_owners_cumulative_by_chip.csv — cumulative by owner × chip
+      4. {output_dir}/nvidia_owners_quarters_by_chip.csv — per-quarter flow by owner × chip
          (only written if total_calendar_quarterly is provided)
 
     Returns:
@@ -953,10 +987,16 @@ def export_nvidia_ownership_csvs(
             'End date': end_date,
         }
 
-    def _tail_cols():
+    def _tail_cols(cq=None):
+        notes = f'Estimates generated on: {timestamp}'
+        if incomplete_note_fn is not None and cq is not None:
+            start, end = _calendar_quarter_date_strings(cq)
+            inc_note = incomplete_note_fn(start, end)
+            if inc_note:
+                notes = f'{inc_note}. {notes}'
         return {
             'Source / Link': '',
-            'Notes': f'Estimates generated on: {timestamp}',
+            'Notes': notes,
             'Last Modified By': '',
             'Last Modified': '',
         }
@@ -982,10 +1022,11 @@ def export_nvidia_ownership_csvs(
                 'Number of Units (5th percentile)': p5_u,
                 'Number of Units (95th percentile)': p95_u,
             })
-            row.update(_tail_cols())
+            row.update(_tail_cols(cq))
             timeline_rows.append(row)
 
     # --- 2. Cumulative totals (hyperscalers only, aggregated across chips) ---
+    first_q_start, _ = _calendar_quarter_date_strings(calendar_quarters[0])
     cumulative_rows = []
     for cq in calendar_quarters:
         for company in hyperscalers:
@@ -995,9 +1036,17 @@ def export_nvidia_ownership_csvs(
             h100e_samples = _h100e_total_samples(
                 hyperscaler_calendar_running[company][cq], chip_specs, h100_tops
             )
-            row = _base_row(f"{company} cumulative through {cq}", company, cq)
+            # Total power in MW across all chip types
+            power_w_samples = sum(
+                hyperscaler_calendar_running[company][cq][chip] * chip_specs[chip]['tdp']
+                for chip in chip_types if chip in chip_specs
+            )
+            power_mw_samples = power_w_samples / 1e6
+            row = _base_row(f"{company} cumulative Nvidia through {cq}", company, cq)
+            row['Start date'] = first_q_start
             p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
             p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+            p5_p, p50_p, p95_p = [round(np.percentile(power_mw_samples, p), 2) for p in [5, 50, 95]]
             row.update({
                 'Compute estimate in H100e (median)': p50_h,
                 'H100e (5th percentile)': p5_h,
@@ -1005,8 +1054,11 @@ def export_nvidia_ownership_csvs(
                 'Number of Units': p50_u,
                 'Number of Units (5th percentile)': p5_u,
                 'Number of Units (95th percentile)': p95_u,
+                'Power in MW (median)': p50_p,
+                'Power in MW (5th percentile)': p5_p,
+                'Power in MW (95th percentile)': p95_p,
             })
-            row.update(_tail_cols())
+            row.update(_tail_cols(cq))
             cumulative_rows.append(row)
 
     # --- 3. Cumulative by chip type (all owners including 'Other') ---
@@ -1026,6 +1078,7 @@ def export_nvidia_ownership_csvs(
                     continue
                 h100e_samples = unit_samples * h100e_mult
                 row = _base_row(f"{owner} {chip} cumulative through {cq}", owner, cq)
+                row['Start date'] = first_q_start
                 p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
                 p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
                 row.update({
@@ -1036,7 +1089,7 @@ def export_nvidia_ownership_csvs(
                     'Number of Units (5th percentile)': p5_u,
                     'Number of Units (95th percentile)': p95_u,
                 })
-                tail = _tail_cols()
+                tail = _tail_cols(cq)
                 # Insert Chip type before the trailing columns
                 row['Chip type'] = chip
                 row.update(tail)
@@ -1075,7 +1128,7 @@ def export_nvidia_ownership_csvs(
                         'Number of Units (5th percentile)': p5_u,
                         'Number of Units (95th percentile)': p95_u,
                     })
-                    tail = _tail_cols()
+                    tail = _tail_cols(cq)
                     row['Chip type'] = chip
                     row.update(tail)
                     timeline_by_chip_rows.append(row)
@@ -1087,22 +1140,22 @@ def export_nvidia_ownership_csvs(
     by_chip_df = pd.DataFrame(by_chip_rows)
 
     # Remap "Other" to a more descriptive label in exported CSVs
-    _other_label = 'Other (ex-Big 4 hyperscalers)'
+    _other_label = 'Other (ex-Big 4 hyperscalers & China)'
     for df in [by_chip_df, timelines_by_chip_df]:
         if df is not None:
             df['Owner'] = df['Owner'].replace('Other', _other_label)
             df['Name'] = df['Name'].str.replace('Other', _other_label, regex=False)
 
-    timelines_df.to_csv(f'{output_dir}/nvidia_ownership_timelines.csv', index=False)
-    cumulative_df.to_csv(f'{output_dir}/nvidia_ownership_cumulative.csv', index=False)
-    by_chip_df.to_csv(f'{output_dir}/nvidia_ownership_cumulative_by_chip.csv', index=False)
+    timelines_df.to_csv(f'{output_dir}/nvidia_owners_quarters.csv', index=False)
+    cumulative_df.to_csv(f'{output_dir}/nvidia_owners_cumulative_totals.csv', index=False)
+    by_chip_df.to_csv(f'{output_dir}/nvidia_owners_cumulative_by_chip.csv', index=False)
 
-    print(f"Exported {len(timelines_df)} rows to {output_dir}/nvidia_ownership_timelines.csv")
-    print(f"Exported {len(cumulative_df)} rows to {output_dir}/nvidia_ownership_cumulative.csv")
-    print(f"Exported {len(by_chip_df)} rows to {output_dir}/nvidia_ownership_cumulative_by_chip.csv")
+    print(f"Exported {len(timelines_df)} rows to {output_dir}/nvidia_owners_quarters.csv")
+    print(f"Exported {len(cumulative_df)} rows to {output_dir}/nvidia_owners_cumulative_totals.csv")
+    print(f"Exported {len(by_chip_df)} rows to {output_dir}/nvidia_owners_cumulative_by_chip.csv")
 
     if timelines_by_chip_df is not None:
-        timelines_by_chip_df.to_csv(f'{output_dir}/nvidia_ownership_timelines_by_chip.csv', index=False)
-        print(f"Exported {len(timelines_by_chip_df)} rows to {output_dir}/nvidia_ownership_timelines_by_chip.csv")
+        timelines_by_chip_df.to_csv(f'{output_dir}/nvidia_owners_quarters_by_chip.csv', index=False)
+        print(f"Exported {len(timelines_by_chip_df)} rows to {output_dir}/nvidia_owners_quarters_by_chip.csv")
 
     return timelines_df, cumulative_df, by_chip_df, timelines_by_chip_df

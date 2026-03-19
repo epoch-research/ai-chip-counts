@@ -151,7 +151,7 @@
 <body>
     <div class="container">
         <h1>Cumulative Chip Ownership by Company</h1>
-        <p class="subtitle">Estimated chip allocations by owner (Nvidia GPUs + Google TPUs), with 90% credible intervals</p>
+        <p class="subtitle">Estimated chip allocations by owner (Nvidia GPUs + Google TPUs + Amazon Trainium), with 90% credible intervals</p>
 
         <div class="view-tabs">
             <div class="view-tab active" onclick="setView('snapshot')">Snapshot</div>
@@ -172,6 +172,16 @@
                 <label>Metric:</label>
                 <button id="btn-h100e" onclick="setMetric('h100e')">H100e</button>
                 <button id="btn-units" onclick="setMetric('units')">Units</button>
+            </div>
+            <div class="control-group" id="snapshot-breakdown-control">
+                <label>Break down by:</label>
+                <button id="btn-breakdown-chip" onclick="setSnapshotBreakdown('chip')">Chip Type</button>
+                <button id="btn-breakdown-designer" onclick="setSnapshotBreakdown('designer')">Chip Designer</button>
+            </div>
+            <div class="control-group" id="snapshot-layout-control">
+                <label>Layout:</label>
+                <button id="btn-layout-multi" onclick="setSnapshotLayout('multi')">Multiple Bars</button>
+                <button id="btn-layout-single" onclick="setSnapshotLayout('single')">Single Bar (%)</button>
             </div>
             <div class="control-group" id="stack-control" style="display:none">
                 <label>Layout:</label>
@@ -248,10 +258,36 @@
             });
         });
 
+        // Map each chip to its designer for the "group by designer" view
+        const CHIP_DESIGNER = {};
+        const DESIGNERS = [];
+        const DESIGNER_CHIPS = {};
+        CHIPS.forEach(chip => {
+            let designer;
+            if (chip.startsWith('TPU')) designer = 'Google (TPU)';
+            else if (chip.startsWith('Trainium')) designer = 'Amazon (Trainium)';
+            else designer = 'Nvidia';
+            CHIP_DESIGNER[chip] = designer;
+            if (!DESIGNER_CHIPS[designer]) {
+                DESIGNER_CHIPS[designer] = [];
+                DESIGNERS.push(designer);
+            }
+            DESIGNER_CHIPS[designer].push(chip);
+        });
+
+        // Distinct colors per designer
+        const DESIGNER_COLORS = {
+            'Nvidia': '#76B900',
+            'Google (TPU)': '#4285F4',
+            'Amazon (Trainium)': '#FF9900',
+        };
+
         let currentMetric = 'h100e';
         let currentView = 'snapshot';
         let currentStacking = 'stacked';
         let currentBreakdown = 'owner';
+        let snapshotBreakdown = 'chip';
+        let snapshotLayout = 'multi';
         let selectedOwners = new Set(OWNERS);
         let chart = null;
 
@@ -293,14 +329,19 @@
                 tab.classList.toggle('active', ['snapshot', 'cumulative', 'flow'][i] === view);
             });
             // Show/hide controls based on view
+            const isSnapshot = view === 'snapshot';
             document.getElementById('quarter-control').style.display =
-                view === 'snapshot' ? '' : 'none';
+                isSnapshot ? '' : 'none';
             document.getElementById('owner-control').style.display =
-                view === 'snapshot' ? 'none' : '';
+                isSnapshot ? 'none' : '';
             document.getElementById('stack-control').style.display =
-                view === 'snapshot' ? 'none' : '';
+                isSnapshot ? 'none' : '';
             document.getElementById('breakdown-control').style.display =
-                view === 'snapshot' ? 'none' : '';
+                isSnapshot ? 'none' : '';
+            document.getElementById('snapshot-breakdown-control').style.display =
+                isSnapshot && snapshotLayout === 'multi' ? '' : 'none';
+            document.getElementById('snapshot-layout-control').style.display =
+                isSnapshot ? '' : 'none';
             updateAll();
         }
 
@@ -321,6 +362,23 @@
         function toggleChipBreakdown() {
             currentBreakdown = currentBreakdown === 'chip' ? 'owner' : 'chip';
             document.getElementById('chip-toggle').classList.toggle('active', currentBreakdown === 'chip');
+            updateAll();
+        }
+
+        function setSnapshotBreakdown(mode) {
+            snapshotBreakdown = mode;
+            document.getElementById('btn-breakdown-chip').classList.toggle('active', mode === 'chip');
+            document.getElementById('btn-breakdown-designer').classList.toggle('active', mode === 'designer');
+            updateAll();
+        }
+
+        function setSnapshotLayout(mode) {
+            snapshotLayout = mode;
+            document.getElementById('btn-layout-multi').classList.toggle('active', mode === 'multi');
+            document.getElementById('btn-layout-single').classList.toggle('active', mode === 'single');
+            // Hide breakdown toggle when in single bar mode
+            document.getElementById('snapshot-breakdown-control').style.display =
+                mode === 'multi' && currentView === 'snapshot' ? '' : 'none';
             updateAll();
         }
 
@@ -378,7 +436,9 @@
         // ========================
         // SNAPSHOT VIEW (stacked bars, one quarter)
         // ========================
-        function updateSnapshotChart() {
+
+        // Default snapshot: one bar per owner, stacked by chip type
+        function updateSnapshotByOwner() {
             document.getElementById('custom-legend').innerHTML = '';
             const quarter = quarterSelect.value;
             const src = getDataSource();
@@ -456,6 +516,150 @@
                     }
                 }
             });
+        }
+
+        // Bars per owner, stacked segments aggregated by chip designer (Nvidia, Google TPU, Amazon Trainium)
+        function updateSnapshotByDesigner() {
+            document.getElementById('custom-legend').innerHTML = '';
+            const quarter = quarterSelect.value;
+            const src = getDataSource();
+            const qData = src[quarter] || {};
+            const metricLabel = currentMetric === 'h100e' ? 'H100e' : 'Units';
+            const grandTotal = getGrandTotal(qData);
+
+            document.getElementById('chart-title').textContent =
+                `Cumulative ${metricLabel} by Owner, broken down by Chip Designer (through ${quarter})`;
+
+            const datasets = [];
+            DESIGNERS.forEach(designer => {
+                const values = [];
+                let hasAny = false;
+                OWNERS.forEach(owner => {
+                    let total = 0;
+                    DESIGNER_CHIPS[designer].forEach(chip => {
+                        const entry = (qData[owner] || {})[chip];
+                        if (entry) total += entry[currentMetric][1];
+                    });
+                    values.push(total);
+                    if (total > 0) hasAny = true;
+                });
+                if (hasAny) {
+                    datasets.push({
+                        label: designer,
+                        data: values,
+                        backgroundColor: DESIGNER_COLORS[designer],
+                        borderColor: DESIGNER_COLORS[designer],
+                        borderWidth: 1,
+                    });
+                }
+            });
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: OWNERS, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: true, aspectRatio: 2,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => OWNERS[items[0].dataIndex],
+                                label: (ctx) => {
+                                    if (ctx.raw === 0) return null;
+                                    const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                    return `${ctx.dataset.label}: ${formatNum(ctx.raw)}${u}`;
+                                },
+                                afterBody: (items) => {
+                                    const owner = OWNERS[items[0].dataIndex];
+                                    const ownerTotal = getOwnerTotal(qData, owner);
+                                    const pct = grandTotal > 0 ? (ownerTotal / grandTotal * 100).toFixed(1) : '0.0';
+                                    const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                    return ['', `Total: ${formatNum(ownerTotal)}${u} (${pct}% of all owners)`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: {
+                            stacked: true, beginAtZero: true,
+                            ticks: { callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v },
+                            title: { display: true, text: `Cumulative ${metricLabel}` }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Single stacked bar: each owner's share of total as a percentage
+        function updateSnapshotSingleBar() {
+            document.getElementById('custom-legend').innerHTML = '';
+            const quarter = quarterSelect.value;
+            const src = getDataSource();
+            const qData = src[quarter] || {};
+            const metricLabel = currentMetric === 'h100e' ? 'H100e' : 'Units';
+            const grandTotal = getGrandTotal(qData);
+
+            document.getElementById('chart-title').textContent =
+                `${metricLabel} Share by Owner (through ${quarter}) \u2014 Total: ${formatNum(grandTotal)}`;
+
+            const datasets = [];
+            OWNERS.forEach((owner, i) => {
+                const ownerTotal = getOwnerTotal(qData, owner);
+                const pct = grandTotal > 0 ? (ownerTotal / grandTotal * 100) : 0;
+                datasets.push({
+                    label: owner,
+                    data: [pct],
+                    backgroundColor: OWNER_COLORS[owner],
+                    borderColor: '#fff',
+                    borderWidth: 1,
+                    _rawTotal: ownerTotal,
+                });
+            });
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: [''], datasets: datasets },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: true, aspectRatio: 3,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const ds = ctx.dataset;
+                                    const pct = ctx.raw.toFixed(1);
+                                    const u = currentMetric === 'h100e' ? ' H100e' : ' units';
+                                    return `${ds.label}: ${pct}% (${formatNum(ds._rawTotal)}${u})`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true, beginAtZero: true, max: 100,
+                            ticks: { callback: v => v + '%' },
+                            title: { display: true, text: `Share of ${metricLabel}` }
+                        },
+                        y: { stacked: true }
+                    }
+                }
+            });
+        }
+
+        function updateSnapshotChart() {
+            if (snapshotLayout === 'single') {
+                updateSnapshotSingleBar();
+            } else if (snapshotBreakdown === 'designer') {
+                updateSnapshotByDesigner();
+            } else {
+                updateSnapshotByOwner();
+            }
         }
 
         // ========================
@@ -706,10 +910,12 @@
             }
         }
 
-        // Initialize
-        setMetric('h100e');
-        setStacking('stacked');
-        // currentBreakdown starts as 'owner' (no chip breakdown by default)
+        // Initialize - set button states without triggering updateAll, then call setView once
+        document.getElementById('btn-h100e').classList.add('active');
+        document.getElementById('btn-stacked').classList.add('active');
+        document.getElementById('btn-breakdown-chip').classList.add('active');
+        document.getElementById('btn-layout-multi').classList.add('active');
+        setView('snapshot');
     </script>
 </body>
 </html>

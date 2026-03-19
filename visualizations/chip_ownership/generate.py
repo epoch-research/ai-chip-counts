@@ -4,6 +4,7 @@ Reads CSV exports from owners_csv_export/ and produces index.html.
 Can be run standalone: python visualizations/chip_ownership/generate.py
 """
 
+import glob as _glob
 import json
 import os
 import pandas as pd
@@ -31,20 +32,28 @@ CHIP_COLORS = {
     'TPU v5p': '#4A148C',
     'TPU v6e': '#8E24AA',
     'TPU v7': '#CE93D8',
+    # Amazon Trainium
+    'Trainium1': '#FF9900',
+    'Trainium2': '#CC7A00',
 }
 
 # Display order for owners and chips
-OWNER_ORDER = ['Microsoft', 'Meta', 'Amazon', 'Google', 'Other (ex-Big 4 hyperscalers)']
+OWNER_ORDER = ['Microsoft', 'Meta', 'Amazon', 'Google', 'Other (ex-Big 4 hyperscalers & China)', 'China (official)']
 CHIP_ORDER = [
     'A100', 'A800', 'H100/H200', 'H800', 'H20', 'B200', 'B300',
     'TPU v3', 'TPU v4', 'TPU v4i', 'TPU v5e', 'TPU v5p', 'TPU v6e', 'TPU v7',
+    'Trainium1', 'Trainium2',
 ]
 
-# CSV file pairs: (cumulative_file, timelines_file)
-CSV_SOURCES = [
-    ('nvidia_ownership_cumulative_by_chip.csv', 'nvidia_ownership_timelines_by_chip.csv'),
-    ('tpu_ownership_cumulative_by_chip.csv', 'tpu_ownership_timelines_by_chip.csv'),
-]
+def _discover_csv_sources():
+    """Discover CSV source pairs by looking for *_owners_cumulative_by_chip.csv files."""
+    pairs = []
+    pattern = os.path.join(CSV_DIR, '*_owners_cumulative_by_chip.csv')
+    for cumulative_path in sorted(_glob.glob(pattern)):
+        prefix = os.path.basename(cumulative_path).replace('_owners_cumulative_by_chip.csv', '')
+        timelines_file = f'{prefix}_owners_quarters_by_chip.csv'
+        pairs.append((os.path.basename(cumulative_path), timelines_file))
+    return pairs
 
 
 def _end_date_to_quarter(end_date_str):
@@ -103,7 +112,7 @@ def generate():
     cumulative_data = {}
     flow_data = {}
 
-    for cumulative_file, timelines_file in CSV_SOURCES:
+    for cumulative_file, timelines_file in _discover_csv_sources():
         cumulative_path = os.path.join(CSV_DIR, cumulative_file)
         timelines_path = os.path.join(CSV_DIR, timelines_file)
 

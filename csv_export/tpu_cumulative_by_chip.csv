@@ -1,57 +1,57 @@
-Name,Chip manufacturer,Start date,End date,Chip type,Number of units (5th percentile),Number of units (median),Number of units (95th percentile)
-TPU v4 Q4 2022 to Q4 2022,Google,10/1/2022,12/31/2022,TPU v4,48232,65964,88073
-TPU v4i Q4 2022 to Q4 2022,Google,10/1/2022,12/31/2022,TPU v4i,12498,20461,31147
-TPU v5e Q4 2022 to Q4 2022,Google,10/1/2022,12/31/2022,TPU v5e,9723,15683,23737
-TPU v4 Q4 2022 to Q1 2023,Google,10/1/2022,3/31/2023,TPU v4,136257,185089,241790
-TPU v4i Q4 2022 to Q1 2023,Google,10/1/2022,3/31/2023,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q1 2023,Google,10/1/2022,3/31/2023,TPU v5e,33246,55180,82134
-TPU v4 Q4 2022 to Q2 2023,Google,10/1/2022,6/30/2023,TPU v4,182912,250892,327779
-TPU v4i Q4 2022 to Q2 2023,Google,10/1/2022,6/30/2023,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q2 2023,Google,10/1/2022,6/30/2023,TPU v5e,123451,175931,242330
-TPU v4 Q4 2022 to Q3 2023,Google,10/1/2022,9/30/2023,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q3 2023,Google,10/1/2022,9/30/2023,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q3 2023,Google,10/1/2022,9/30/2023,TPU v5e,309560,427327,567663
-TPU v4 Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v5e,598751,821723,1078880
-TPU v5p Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v5p,7281,14422,22488
-TPU v4 Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v5e,909866,1240607,1627801
-TPU v5p Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v5p,71245,98628,129228
-TPU v4 Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v5e,1189620,1624711,2122986
-TPU v5p Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v5p,178443,245024,318278
-TPU v4 Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v5e,1450820,1987935,2601413
-TPU v5p Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v5p,298370,406393,531406
-TPU v6e Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v6e,16810,40395,72034
-TPU v4 Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v5e,1668912,2292053,3017344
-TPU v5p Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v5p,402870,543094,705286
-TPU v6e Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v6e,149214,215722,295520
-TPU v4 Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v5e,1745468,2391837,3147874
-TPU v5p Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v5p,473815,641125,829617
-TPU v6e Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v6e,468434,625998,800248
-TPU v4 Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v5e,1745468,2391837,3147874
-TPU v5p Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v5p,495021,672187,871267
-TPU v6e Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v6e,990138,1294704,1605293
-TPU v4 Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v5e,1745468,2391837,3147874
-TPU v5p Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v5p,495021,672187,871267
-TPU v6e Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v6e,1563714,2034427,2505517
-TPU v7 Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v7,23681,51565,79592
-TPU v4 Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v4,190719,261998,343997
-TPU v4i Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v4i,18344,30031,45716
-TPU v5e Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v5e,1745468,2391837,3147874
-TPU v5p Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v5p,495021,672187,871267
-TPU v6e Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v6e,1759147,2291801,2835174
-TPU v7 Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v7,37155,80905,124877
+Name,Chip manufacturer,Start date,End date,Chip type,Number of units (5th percentile),Number of units (median),Number of units (95th percentile),Notes
+TPU v4 Q4 2022 to Q4 2022,Google,10/1/2022,12/31/2022,TPU v4,48232,65964,88073,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q4 2022,Google,10/1/2022,12/31/2022,TPU v4i,12498,20461,31147,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q4 2022,Google,10/1/2022,12/31/2022,TPU v5e,9723,15683,23737,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q1 2023,Google,10/1/2022,3/31/2023,TPU v4,136257,185089,241790,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q1 2023,Google,10/1/2022,3/31/2023,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q1 2023,Google,10/1/2022,3/31/2023,TPU v5e,33246,55180,82134,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q2 2023,Google,10/1/2022,6/30/2023,TPU v4,182912,250892,327779,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q2 2023,Google,10/1/2022,6/30/2023,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q2 2023,Google,10/1/2022,6/30/2023,TPU v5e,123451,175931,242330,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q3 2023,Google,10/1/2022,9/30/2023,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q3 2023,Google,10/1/2022,9/30/2023,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q3 2023,Google,10/1/2022,9/30/2023,TPU v5e,309560,427327,567663,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v5e,598751,821723,1078880,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q4 2023,Google,10/1/2022,12/31/2023,TPU v5p,7281,14422,22488,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v5e,909866,1240607,1627801,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q1 2024,Google,10/1/2022,3/31/2024,TPU v5p,71245,98628,129228,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v5e,1189620,1624711,2122986,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q2 2024,Google,10/1/2022,6/30/2024,TPU v5p,178443,245024,318278,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v5e,1450820,1987935,2601413,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v5p,298370,406393,531406,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v6e Q4 2022 to Q3 2024,Google,10/1/2022,9/30/2024,TPU v6e,16810,40395,72034,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v5e,1668912,2292053,3017344,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v5p,402870,543094,705286,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v6e Q4 2022 to Q4 2024,Google,10/1/2022,12/31/2024,TPU v6e,149214,215722,295520,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v5e,1745468,2391837,3147874,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v5p,473815,641125,829617,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v6e Q4 2022 to Q1 2025,Google,10/1/2022,3/31/2025,TPU v6e,468434,625998,800248,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v5e,1745468,2391837,3147874,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v5p,495021,672187,871267,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v6e Q4 2022 to Q2 2025,Google,10/1/2022,6/30/2025,TPU v6e,990138,1294704,1605293,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v5e,1745468,2391837,3147874,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v5p,495021,672187,871267,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v6e Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v6e,1563714,2034427,2505517,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v7 Q4 2022 to Q3 2025,Google,10/1/2022,9/30/2025,TPU v7,23681,51565,79592,Incomplete: based on Broadcom fiscal quarters beginning 10/31/2022. Estimates generated on: 03-09-2026 15:58
+TPU v4 Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v4,190719,261998,343997,Incomplete: based on Broadcom fiscal quarters 10/31/2022 to 11/2/2025. Estimates generated on: 03-09-2026 15:58
+TPU v4i Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v4i,18344,30031,45716,Incomplete: based on Broadcom fiscal quarters 10/31/2022 to 11/2/2025. Estimates generated on: 03-09-2026 15:58
+TPU v5e Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v5e,1745468,2391837,3147874,Incomplete: based on Broadcom fiscal quarters 10/31/2022 to 11/2/2025. Estimates generated on: 03-09-2026 15:58
+TPU v5p Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v5p,495021,672187,871267,Incomplete: based on Broadcom fiscal quarters 10/31/2022 to 11/2/2025. Estimates generated on: 03-09-2026 15:58
+TPU v6e Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v6e,1759147,2291801,2835174,Incomplete: based on Broadcom fiscal quarters 10/31/2022 to 11/2/2025. Estimates generated on: 03-09-2026 15:58
+TPU v7 Q4 2022 to Q4 2025,Google,10/1/2022,12/31/2025,TPU v7,37155,80905,124877,Incomplete: based on Broadcom fiscal quarters 10/31/2022 to 11/2/2025. Estimates generated on: 03-09-2026 15:58
