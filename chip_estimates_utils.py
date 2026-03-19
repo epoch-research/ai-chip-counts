@@ -2,7 +2,11 @@
 
 import numpy as np
 import pandas as pd
+import squigglepy as sq
 from datetime import datetime
+
+# Warn (not error) on invalid operations like NaN
+np.seterr(invalid='raise')
 
 
 # ===============================
@@ -50,6 +54,128 @@ def estimate_chip_sales(quarters, versions, sample_revenue, sample_shares, sampl
                 results[quarter][version].append(chips)
 
     return results
+
+
+def estimate_cumulative_chip_sales(
+    quarters,
+    chip_types,
+    sample_revenue,
+    sample_shares,
+    sample_base_price,
+    get_deflation_factor=None,
+    sample_revenue_uncertainty=None,
+    price_correlation=None,
+    base_price_distributions=None,
+    n_samples=5000,
+):
+    """
+    Run Monte Carlo simulation to estimate cumulative chip volumes with correlated parameters.
+
+    Similar to estimate_chip_sales, but presamples certain parameters to correlate them
+    across quarters. Use this when estimating cumulative totals where you want price
+    uncertainty (and optionally revenue multiplier) to compound rather than average out.
+
+    Args:
+        quarters: list of quarter identifiers (e.g., ['Q1_2023', 'Q2_2023', ...])
+        chip_types: list of chip types (e.g., ['alpha', 'beta', 'gamma', ...])
+        sample_revenue: fn(quarter) -> float, samples total chip revenue in dollars for a quarter
+        sample_shares: fn(quarter) -> dict, samples {chip: share} for a quarter (should sum to 1)
+        sample_base_price: fn(chip) -> float, samples the BASE price for a chip type
+            (i.e., the price when the chip was first introduced). Called once per chip;
+            subsequent quarters use this base price scaled by get_deflation_factor.
+        get_deflation_factor: fn(quarter, chip) -> float, returns price multiplier for a
+            quarter relative to the base price. Should return 1.0 for the chip's first
+            quarter and <1.0 for later quarters as prices decline. If None, no deflation.
+        sample_revenue_uncertainty: fn() -> float, samples a multiplier for revenue uncertainty.
+            Sampled once and applied to all quarters. Use this to model correlated uncertainty
+            in revenue estimates (e.g., lambda: sq.to(0.9, 1.1) @ 1 if revenue could be 10% off
+            in either direction, consistently across quarters). If None, no multiplier applied.
+        price_correlation: float or correlation matrix, optional. If provided, applies rank
+            correlation across chip types' base price samples using sq.correlate. A float
+            (e.g. 0.6) sets uniform pairwise correlation; a matrix allows per-pair control.
+            Requires base_price_distributions to be set. This widens aggregate confidence
+            intervals by preventing independent price draws from canceling out.
+        base_price_distributions: dict of {chip: squigglepy distribution}, optional.
+            Required when price_correlation is set. Maps each chip type to its base price
+            distribution (e.g. BASE_PRICES dict). Used with sq.correlate to generate
+            correlated price samples directly from the distributions.
+        n_samples: number of Monte Carlo samples
+
+    Returns:
+        dict of {quarter: {chip: np.array of chip counts for that quarter}}
+        Each array has n_samples elements representing the distribution of chips for that quarter.
+        Use aggregate_by_chip_type() to get cumulative totals by chip.
+
+    Note on correlations:
+        - Prices are sampled once per chip type and reused (with deflation) across all quarters.
+          This means if we sample a "high price world", that persists for the entire simulation.
+        - If price_correlation is set, prices are also correlated across chip types, so a
+          "high price world" for one chip tends to be high for others too.
+        - Revenue uncertainty (if provided) is sampled once and applied to all quarters.
+        - Revenue and production mix shares are sampled independently each quarter.
+    """
+    # === PRESAMPLE CORRELATED PARAMS ===
+
+    # Prices: sample once per chip, with optional cross-chip correlation via sq.correlate
+    if price_correlation is not None:
+        if base_price_distributions is None:
+            raise ValueError("base_price_distributions is required when price_correlation is set")
+        dists = tuple(base_price_distributions[chip] for chip in chip_types)
+        correlated_dists = sq.correlate(dists, price_correlation)
+        base_price_samples = {
+            chip: np.array(correlated_dists[i] @ n_samples)
+            for i, chip in enumerate(chip_types)
+        }
+    else:
+        base_price_samples = {
+            chip: np.array([sample_base_price(chip) for _ in range(n_samples)])
+            for chip in chip_types
+        }
+
+    # Revenue uncertainty (if provided)
+    rev_multiplier = np.array([sample_revenue_uncertainty() for _ in range(n_samples)]) if sample_revenue_uncertainty else np.ones(n_samples)
+
+    # === MAIN LOOP ===
+    results = {quarter: {chip: np.zeros(n_samples) for chip in chip_types} for quarter in quarters}
+
+    for quarter in quarters:
+        # Sample revenue (uncorrelated) with uncertainty multiplier (correlated)
+        revenue = np.array([sample_revenue(quarter) for _ in range(n_samples)]) * rev_multiplier
+
+        # Sample shares (uncorrelated)
+        shares_list = [sample_shares(quarter) for _ in range(n_samples)]
+
+        for chip in chip_types:
+            shares = np.nan_to_num(np.array([s.get(chip, 0) for s in shares_list]), nan=0.0)
+            deflation = get_deflation_factor(quarter, chip) if get_deflation_factor else 1.0
+            price = base_price_samples[chip] * deflation
+            results[quarter][chip] = (revenue * shares) / price
+
+    return results
+
+
+def aggregate_by_chip_type(quarterly_results):
+    """
+    Aggregate quarterly chip results into cumulative totals by chip type.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+                           Output from estimate_cumulative_chip_sales() or estimate_chip_sales()
+
+    Returns:
+        dict of {chip: np.array of cumulative chip counts across all quarters}
+        Each array has n_samples elements representing the distribution of total chips.
+    """
+    quarters = list(quarterly_results.keys())
+    chip_types = list(quarterly_results[quarters[0]].keys())
+    n_samples = len(quarterly_results[quarters[0]][chip_types[0]])
+
+    cumulative = {chip: np.zeros(n_samples) for chip in chip_types}
+    for quarter in quarters:
+        for chip in chip_types:
+            cumulative[chip] += np.array(quarterly_results[quarter][chip])
+
+    return cumulative
 
 
 def normalize_shares(raw_shares):
@@ -408,6 +534,118 @@ def interpolate_to_calendar_quarters(sim_results, quarter_dates, verbose=True):
     return calendar_results
 
 
+def interpolate_samples_to_calendar_quarters(quarterly_results, quarter_dates):
+    """
+    Interpolate fiscal quarter samples to calendar quarters (sample-based).
+
+    Unlike interpolate_to_calendar_quarters which averages percentiles, this function
+    preserves the full sample arrays by weighting each sample individually. This
+    maintains correlations across chips and produces accurate confidence intervals.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+                           Output from estimate_chip_sales() or estimate_cumulative_chip_sales()
+        quarter_dates: dict of {quarter: (start_date, end_date)} where dates are
+                       datetime objects or strings parseable by pd.to_datetime
+
+    Returns:
+        dict of {calendar_quarter: {chip: np.array of samples}}
+        Calendar quarters are named like 'Q1 2024', 'Q2 2024', etc.
+    """
+    # Parse quarter dates
+    fiscal_quarters = []
+    for quarter in quarterly_results.keys():
+        start, end = quarter_dates[quarter]
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+        fiscal_quarters.append({
+            'quarter': quarter,
+            'start': start,
+            'end': end,
+            'days': (end - start).days + 1
+        })
+
+    # Get chip types and n_samples from first quarter
+    first_quarter = fiscal_quarters[0]['quarter']
+    chip_types = list(quarterly_results[first_quarter].keys())
+    n_samples = len(quarterly_results[first_quarter][chip_types[0]])
+
+    # Determine the range of calendar quarters we need
+    all_dates = []
+    for fq in fiscal_quarters:
+        all_dates.extend([fq['start'], fq['end']])
+    min_date, max_date = min(all_dates), max(all_dates)
+
+    # Generate all calendar quarters in the range
+    calendar_quarters = []
+    current = datetime(min_date.year, ((min_date.month - 1) // 3) * 3 + 1, 1)
+    while current <= max_date:
+        cal_q = _get_calendar_quarter(current)
+        if cal_q not in calendar_quarters:
+            calendar_quarters.append(cal_q)
+        # Move to next quarter
+        if current.month >= 10:
+            current = datetime(current.year + 1, 1, 1)
+        else:
+            current = datetime(current.year, current.month + 3, 1)
+
+    # Build overlap mapping: calendar_quarter -> [(fiscal_quarter, fraction), ...]
+    calendar_map = {}
+    for cq in calendar_quarters:
+        cq_start, cq_end = _get_calendar_quarter_bounds(cq)
+        overlaps = []
+        for fq in fiscal_quarters:
+            days_overlap = _days_overlap(fq['start'], fq['end'], cq_start, cq_end)
+            if days_overlap > 0:
+                pct_of_fq = days_overlap / fq['days']
+                overlaps.append({
+                    'fiscal_quarter': fq['quarter'],
+                    'pct_of_fiscal_quarter': pct_of_fq,
+                })
+        calendar_map[cq] = overlaps
+
+    # Initialize results with zero arrays
+    calendar_results = {
+        cq: {chip: np.zeros(n_samples) for chip in chip_types}
+        for cq in calendar_quarters
+    }
+
+    # Interpolate: weight each sample by the overlap fraction
+    for cq, overlaps in calendar_map.items():
+        for overlap in overlaps:
+            fq_name = overlap['fiscal_quarter']
+            fraction = overlap['pct_of_fiscal_quarter']
+            for chip in chip_types:
+                calendar_results[cq][chip] += quarterly_results[fq_name][chip] * fraction
+
+    return calendar_results
+
+
+def compute_running_totals(quarterly_results):
+    """
+    Compute running totals from per-quarter results.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+
+    Returns:
+        dict of {quarter: {chip: np.array of cumulative samples up to and including that quarter}}
+    """
+    quarters = list(quarterly_results.keys())
+    chip_types = list(quarterly_results[quarters[0]].keys())
+    n_samples = len(quarterly_results[quarters[0]][chip_types[0]])
+
+    running_totals = {}
+    cumulative = {chip: np.zeros(n_samples) for chip in chip_types}
+
+    for quarter in quarters:
+        for chip in chip_types:
+            cumulative[chip] = cumulative[chip] + quarterly_results[quarter][chip]
+        running_totals[quarter] = {chip: cumulative[chip].copy() for chip in chip_types}
+
+    return running_totals
+
+
 def verify_calendar_quarter_interpolation(sim_results, calendar_results, quarter_dates, verbose=True):
     """
     Run sanity checks on calendar quarter interpolation.
@@ -635,3 +873,289 @@ def verify_calendar_quarter_interpolation(sim_results, calendar_results, quarter
         print(f"\n{'All checks passed!' if all_passed else 'Some checks FAILED!'}")
 
     return all_passed
+
+
+# ===============================
+# Nvidia ownership CSV exports
+# ===============================
+
+def make_incomplete_note_fn(fiscal_first_start, fiscal_last_end, source_label='Nvidia'):
+    """Create a function that checks if a calendar quarter has incomplete data coverage.
+
+    Args:
+        fiscal_first_start: Start date string of the first fiscal quarter (e.g. '2022-01-31' or '1/31/2022')
+        fiscal_last_end: End date string of the last fiscal quarter
+        source_label: Label for the data source (e.g. 'Nvidia', 'Broadcom')
+
+    Returns:
+        A function(cal_q_start, cal_q_end) -> str or None
+    """
+    import pandas as _pd
+    first_dt = _pd.to_datetime(fiscal_first_start)
+    last_dt = _pd.to_datetime(fiscal_last_end)
+    first_str = f"{first_dt.month}/{first_dt.day}/{first_dt.year}"
+    last_str = f"{last_dt.month}/{last_dt.day}/{last_dt.year}"
+
+    def get_incomplete_note(cal_q_start, cal_q_end):
+        cal_start_dt = _pd.to_datetime(cal_q_start, format='%m/%d/%Y')
+        cal_end_dt = _pd.to_datetime(cal_q_end, format='%m/%d/%Y')
+        starts_before = cal_start_dt < first_dt
+        ends_after = cal_end_dt > last_dt
+        if starts_before and ends_after:
+            return f"Incomplete: based on {source_label} fiscal quarters {first_str} to {last_str}"
+        elif starts_before:
+            return f"Incomplete: based on {source_label} fiscal quarters beginning {first_str}"
+        elif ends_after:
+            return f"Incomplete: based on {source_label} fiscal quarters ending {last_str}"
+        return None
+
+    return get_incomplete_note
+
+
+def _calendar_quarter_date_strings(cal_q):
+    """Return (start_date, end_date) as M/D/YYYY strings for a calendar quarter like 'Q1 2024'."""
+    parts = cal_q.split()
+    q_num = int(parts[0][1])
+    year = int(parts[1])
+    starts = {1: f"1/1/{year}", 2: f"4/1/{year}", 3: f"7/1/{year}", 4: f"10/1/{year}"}
+    ends = {1: f"3/31/{year}", 2: f"6/30/{year}", 3: f"9/30/{year}", 4: f"12/31/{year}"}
+    return starts[q_num], ends[q_num]
+
+
+def _h100e_total_samples(chip_samples, chip_specs, h100_tops):
+    """Sum H100e across all chips for one quarter. chip_samples: {chip: np.array}."""
+    total = None
+    for chip, samples in chip_samples.items():
+        if chip in chip_specs:
+            h100e = samples * (chip_specs[chip]['tops'] / h100_tops)
+            total = h100e if total is None else total + h100e
+    return total
+
+
+def _owner_unit_samples(owner, cq, chip, hyperscalers, owner_data, total_data):
+    """Get unit samples for an owner/quarter/chip, computing 'Other' as total minus hyperscalers."""
+    if owner == 'Other':
+        hyperscaler_sum = sum(owner_data[c][cq][chip] for c in hyperscalers)
+        return total_data[cq][chip] - hyperscaler_sum
+    return owner_data[owner][cq][chip]
+
+
+def _percentile_row(samples, prefix=''):
+    """Extract p5/p50/p95 from samples into a dict with standard column names."""
+    p5, p50, p95 = [int(np.percentile(samples, p)) for p in [5, 50, 95]]
+    return {
+        f'{prefix}Compute estimate in H100e (median)': None,  # placeholder, overwritten below
+        f'{prefix}H100e (5th percentile)': None,
+        f'{prefix}H100e (95th percentile)': None,
+        f'{prefix}Number of Units': p50,
+        f'{prefix}Number of Units (5th percentile)': p5,
+        f'{prefix}Number of Units (95th percentile)': p95,
+    }
+
+
+def export_nvidia_owners_csvs(
+    calendar_quarters, hyperscalers, all_owners, chip_types, chip_specs, h100_tops,
+    hyperscaler_calendar_quarterly, hyperscaler_calendar_running,
+    total_calendar_running, total_calendar_quarterly=None,
+    output_dir='owners_csv_export',
+    incomplete_note_fn=None,
+):
+    """
+    Export ownership CSVs from calendar-quarter sample data.
+
+    Writes:
+      1. {output_dir}/nvidia_owners_quarters.csv — per-quarter flow by hyperscaler
+      2. {output_dir}/nvidia_owners_cumulative_totals.csv — cumulative by hyperscaler
+      3. {output_dir}/nvidia_owners_cumulative_by_chip.csv — cumulative by owner × chip
+      4. {output_dir}/nvidia_owners_quarters_by_chip.csv — per-quarter flow by owner × chip
+         (only written if total_calendar_quarterly is provided)
+
+    Returns:
+        (timelines_df, cumulative_df, cumulative_by_chip_df, timelines_by_chip_df)
+        timelines_by_chip_df is None if total_calendar_quarterly is not provided.
+    """
+    from datetime import datetime as _dt
+    timestamp = _dt.now().strftime("%m-%d-%Y %H:%M")
+
+    def _base_row(name, owner, cq):
+        start_date, end_date = _calendar_quarter_date_strings(cq)
+        return {
+            'Name': name,
+            'Chip manufacturer': 'Nvidia',
+            'Owner': owner,
+            'Start date': start_date,
+            'End date': end_date,
+        }
+
+    def _tail_cols(cq=None):
+        notes = f'Estimates generated on: {timestamp}'
+        if incomplete_note_fn is not None and cq is not None:
+            start, end = _calendar_quarter_date_strings(cq)
+            inc_note = incomplete_note_fn(start, end)
+            if inc_note:
+                notes = f'{inc_note}. {notes}'
+        return {
+            'Source / Link': '',
+            'Notes': notes,
+            'Last Modified By': '',
+            'Last Modified': '',
+        }
+
+    # --- 1. Per-quarter timelines (hyperscalers only, aggregated across chips) ---
+    timeline_rows = []
+    for cq in calendar_quarters:
+        for company in hyperscalers:
+            unit_samples = sum(
+                hyperscaler_calendar_quarterly[company][cq][chip] for chip in chip_types
+            )
+            h100e_samples = _h100e_total_samples(
+                hyperscaler_calendar_quarterly[company][cq], chip_specs, h100_tops
+            )
+            row = _base_row(f"{company} {cq}", company, cq)
+            p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+            p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+            row.update({
+                'Compute estimate in H100e (median)': p50_h,
+                'H100e (5th percentile)': p5_h,
+                'H100e (95th percentile)': p95_h,
+                'Number of Units': p50_u,
+                'Number of Units (5th percentile)': p5_u,
+                'Number of Units (95th percentile)': p95_u,
+            })
+            row.update(_tail_cols(cq))
+            timeline_rows.append(row)
+
+    # --- 2. Cumulative totals (hyperscalers only, aggregated across chips) ---
+    first_q_start, _ = _calendar_quarter_date_strings(calendar_quarters[0])
+    cumulative_rows = []
+    for cq in calendar_quarters:
+        for company in hyperscalers:
+            unit_samples = sum(
+                hyperscaler_calendar_running[company][cq][chip] for chip in chip_types
+            )
+            h100e_samples = _h100e_total_samples(
+                hyperscaler_calendar_running[company][cq], chip_specs, h100_tops
+            )
+            # Total power in MW across all chip types
+            power_w_samples = sum(
+                hyperscaler_calendar_running[company][cq][chip] * chip_specs[chip]['tdp']
+                for chip in chip_types if chip in chip_specs
+            )
+            power_mw_samples = power_w_samples / 1e6
+            row = _base_row(f"{company} cumulative Nvidia through {cq}", company, cq)
+            row['Start date'] = first_q_start
+            p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+            p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+            p5_p, p50_p, p95_p = [round(np.percentile(power_mw_samples, p), 2) for p in [5, 50, 95]]
+            row.update({
+                'Compute estimate in H100e (median)': p50_h,
+                'H100e (5th percentile)': p5_h,
+                'H100e (95th percentile)': p95_h,
+                'Number of Units': p50_u,
+                'Number of Units (5th percentile)': p5_u,
+                'Number of Units (95th percentile)': p95_u,
+                'Power in MW (median)': p50_p,
+                'Power in MW (5th percentile)': p5_p,
+                'Power in MW (95th percentile)': p95_p,
+            })
+            row.update(_tail_cols(cq))
+            cumulative_rows.append(row)
+
+    # --- 3. Cumulative by chip type (all owners including 'Other') ---
+    by_chip_rows = []
+    for cq in calendar_quarters:
+        for chip in chip_types:
+            if chip not in chip_specs:
+                continue
+            h100e_mult = chip_specs[chip]['tops'] / h100_tops
+            for owner in all_owners:
+                unit_samples = _owner_unit_samples(
+                    owner, cq, chip, hyperscalers,
+                    hyperscaler_calendar_running, total_calendar_running,
+                )
+                p50_units = int(np.percentile(unit_samples, 50))
+                if p50_units == 0:
+                    continue
+                h100e_samples = unit_samples * h100e_mult
+                row = _base_row(f"{owner} {chip} cumulative through {cq}", owner, cq)
+                row['Start date'] = first_q_start
+                p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+                p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+                row.update({
+                    'Compute estimate in H100e (median)': p50_h,
+                    'H100e (5th percentile)': p5_h,
+                    'H100e (95th percentile)': p95_h,
+                    'Number of Units': p50_u,
+                    'Number of Units (5th percentile)': p5_u,
+                    'Number of Units (95th percentile)': p95_u,
+                })
+                tail = _tail_cols(cq)
+                # Insert Chip type before the trailing columns
+                row['Chip type'] = chip
+                row.update(tail)
+                by_chip_rows.append(row)
+
+    # --- 4. Per-quarter timelines by chip type (all owners including 'Other') ---
+    timelines_by_chip_df = None
+    if total_calendar_quarterly is not None:
+        timeline_by_chip_rows = []
+        for cq in calendar_quarters:
+            for chip in chip_types:
+                if chip not in chip_specs:
+                    continue
+                h100e_mult = chip_specs[chip]['tops'] / h100_tops
+                for owner in all_owners:
+                    # Get per-quarter (flow) unit samples for this owner/chip
+                    if owner == 'Other':
+                        hyperscaler_sum = sum(
+                            hyperscaler_calendar_quarterly[c][cq][chip] for c in hyperscalers
+                        )
+                        unit_samples = total_calendar_quarterly[cq][chip] - hyperscaler_sum
+                    else:
+                        unit_samples = hyperscaler_calendar_quarterly[owner][cq][chip]
+                    p50_units = int(np.percentile(unit_samples, 50))
+                    if p50_units == 0:
+                        continue
+                    h100e_samples = unit_samples * h100e_mult
+                    row = _base_row(f"{owner} {chip} {cq}", owner, cq)
+                    p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
+                    p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+                    row.update({
+                        'Compute estimate in H100e (median)': p50_h,
+                        'H100e (5th percentile)': p5_h,
+                        'H100e (95th percentile)': p95_h,
+                        'Number of Units': p50_u,
+                        'Number of Units (5th percentile)': p5_u,
+                        'Number of Units (95th percentile)': p95_u,
+                    })
+                    tail = _tail_cols(cq)
+                    row['Chip type'] = chip
+                    row.update(tail)
+                    timeline_by_chip_rows.append(row)
+        timelines_by_chip_df = pd.DataFrame(timeline_by_chip_rows)
+
+    # Write CSVs
+    timelines_df = pd.DataFrame(timeline_rows)
+    cumulative_df = pd.DataFrame(cumulative_rows)
+    by_chip_df = pd.DataFrame(by_chip_rows)
+
+    # Remap "Other" to a more descriptive label in exported CSVs
+    _other_label = 'Other (ex-Big 4 hyperscalers & China)'
+    for df in [by_chip_df, timelines_by_chip_df]:
+        if df is not None:
+            df['Owner'] = df['Owner'].replace('Other', _other_label)
+            df['Name'] = df['Name'].str.replace('Other', _other_label, regex=False)
+
+    timelines_df.to_csv(f'{output_dir}/nvidia_owners_quarters.csv', index=False)
+    cumulative_df.to_csv(f'{output_dir}/nvidia_owners_cumulative_totals.csv', index=False)
+    by_chip_df.to_csv(f'{output_dir}/nvidia_owners_cumulative_by_chip.csv', index=False)
+
+    print(f"Exported {len(timelines_df)} rows to {output_dir}/nvidia_owners_quarters.csv")
+    print(f"Exported {len(cumulative_df)} rows to {output_dir}/nvidia_owners_cumulative_totals.csv")
+    print(f"Exported {len(by_chip_df)} rows to {output_dir}/nvidia_owners_cumulative_by_chip.csv")
+
+    if timelines_by_chip_df is not None:
+        timelines_by_chip_df.to_csv(f'{output_dir}/nvidia_owners_quarters_by_chip.csv', index=False)
+        print(f"Exported {len(timelines_by_chip_df)} rows to {output_dir}/nvidia_owners_quarters_by_chip.csv")
+
+    return timelines_df, cumulative_df, by_chip_df, timelines_by_chip_df
