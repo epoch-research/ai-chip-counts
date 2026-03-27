@@ -5,8 +5,79 @@ import pandas as pd
 import squigglepy as sq
 from datetime import datetime
 
+import config
+
 # Warn (not error) on invalid operations like NaN
 np.seterr(invalid='raise')
+
+
+# ===============================
+# Speculative China chip stocks
+# ===============================
+# China-specific or export-restricted chips that may indicate smuggled inventory
+CHINA_SPECIFIC_CHIPS = ['H20', 'H800', 'A800']
+
+
+def should_show_speculative_smuggled_chips():
+    """Check if speculative smuggled chip estimates should be shown.
+
+    Returns:
+        bool: True if the setting is enabled, False otherwise (default).
+    """
+    return getattr(config, 'show_speculative_smuggled_chips', False)
+
+
+def filter_china_chip_stocks(df, owner_column='Owner', chip_column='Chip type'):
+    """Filter out speculative China chip stock data if the setting is disabled.
+
+    Args:
+        df: DataFrame to filter
+        owner_column: Name of the column containing owner information
+        chip_column: Name of the column containing chip type (optional)
+
+    Returns:
+        DataFrame with China chip stocks filtered out if setting is disabled,
+        or the original DataFrame if setting is enabled.
+    """
+    if should_show_speculative_smuggled_chips():
+        return df
+
+    # Filter out rows with 'China' in the owner column
+    if owner_column in df.columns:
+        mask = ~df[owner_column].str.contains('China', case=False, na=False)
+        df = df[mask]
+
+    return df
+
+
+def get_china_chip_stock_estimate(quarterly_results, chip_types=None):
+    """Get speculative estimate of China chip stocks.
+
+    Only returns data if show_speculative_smuggled_chips setting is enabled.
+
+    Args:
+        quarterly_results: dict of {quarter: {chip: np.array of samples}}
+        chip_types: list of chip types to include (defaults to CHINA_SPECIFIC_CHIPS)
+
+    Returns:
+        dict with speculative China chip stock estimates, or None if setting is disabled.
+    """
+    if not should_show_speculative_smuggled_chips():
+        return None
+
+    if chip_types is None:
+        chip_types = CHINA_SPECIFIC_CHIPS
+
+    quarters = list(quarterly_results.keys())
+    china_stocks = {}
+
+    for quarter in quarters:
+        china_stocks[quarter] = {}
+        for chip in chip_types:
+            if chip in quarterly_results[quarter]:
+                china_stocks[quarter][chip] = quarterly_results[quarter][chip]
+
+    return china_stocks
 
 
 # ===============================
