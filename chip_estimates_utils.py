@@ -979,10 +979,12 @@ def export_nvidia_owners_csvs(
 
     def _base_row(name, owner, cq):
         start_date, end_date = _calendar_quarter_date_strings(cq)
+        display_owner = owner.replace('China (official)', 'China')
+        display_name = name.replace('China (official)', 'China')
         return {
-            'Name': name,
+            'Name': display_name,
             'Chip manufacturer': 'Nvidia',
-            'Owner': owner,
+            'Owner': display_owner,
             'Start date': start_date,
             'End date': end_date,
         }
@@ -997,8 +999,6 @@ def export_nvidia_owners_csvs(
         return {
             'Source / Link': '',
             'Notes': notes,
-            'Last Modified By': '',
-            'Last Modified': '',
         }
 
     # --- 1. Per-quarter timelines (hyperscalers only, aggregated across chips) ---
@@ -1014,6 +1014,12 @@ def export_nvidia_owners_csvs(
             row = _base_row(f"{company} {cq}", company, cq)
             p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
             p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+            # Total TDP in watts across all chip types
+            tdp_w_samples = sum(
+                hyperscaler_calendar_quarterly[company][cq][chip] * chip_specs[chip]['tdp']
+                for chip in chip_types if chip in chip_specs
+            )
+            p5_t, p50_t, p95_t = [int(np.percentile(tdp_w_samples, p)) for p in [5, 50, 95]]
             row.update({
                 'Compute estimate in H100e (median)': p50_h,
                 'H100e (5th percentile)': p5_h,
@@ -1021,6 +1027,9 @@ def export_nvidia_owners_csvs(
                 'Number of Units': p50_u,
                 'Number of Units (5th percentile)': p5_u,
                 'Number of Units (95th percentile)': p95_u,
+                'Total TDP (W)': p50_t,
+                'Total TDP (W) (5th percentile)': p5_t,
+                'Total TDP (W) (95th percentile)': p95_t,
             })
             row.update(_tail_cols(cq))
             timeline_rows.append(row)
@@ -1047,6 +1056,7 @@ def export_nvidia_owners_csvs(
             p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
             p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
             p5_p, p50_p, p95_p = [round(np.percentile(power_mw_samples, p), 2) for p in [5, 50, 95]]
+            p5_t, p50_t, p95_t = [int(np.percentile(power_w_samples, p)) for p in [5, 50, 95]]
             row.update({
                 'Compute estimate in H100e (median)': p50_h,
                 'H100e (5th percentile)': p5_h,
@@ -1054,10 +1064,21 @@ def export_nvidia_owners_csvs(
                 'Number of Units': p50_u,
                 'Number of Units (5th percentile)': p5_u,
                 'Number of Units (95th percentile)': p95_u,
+                'Total TDP (W)': p50_t,
+                'Total TDP (W) (5th percentile)': p5_t,
+                'Total TDP (W) (95th percentile)': p95_t,
                 'Power in MW (median)': p50_p,
                 'Power in MW (5th percentile)': p5_p,
                 'Power in MW (95th percentile)': p95_p,
             })
+            # Check if this quarter has incomplete data coverage
+            incomplete_flag = ''
+            if incomplete_note_fn is not None:
+                start_date, end_date = _calendar_quarter_date_strings(cq)
+                inc_note = incomplete_note_fn(start_date, end_date)
+                if inc_note:
+                    incomplete_flag = 'checked'
+            row['Incomplete'] = incomplete_flag
             row.update(_tail_cols(cq))
             cumulative_rows.append(row)
 
@@ -1081,6 +1102,15 @@ def export_nvidia_owners_csvs(
                 row['Start date'] = first_q_start
                 p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
                 p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+                tdp_w_samples = unit_samples * chip_specs[chip]['tdp']
+                p5_t, p50_t, p95_t = [int(np.percentile(tdp_w_samples, p)) for p in [5, 50, 95]]
+                # Check if this quarter has incomplete data coverage
+                incomplete_flag = ''
+                if incomplete_note_fn is not None:
+                    start_date, end_date = _calendar_quarter_date_strings(cq)
+                    inc_note = incomplete_note_fn(start_date, end_date)
+                    if inc_note:
+                        incomplete_flag = 'checked'
                 row.update({
                     'Compute estimate in H100e (median)': p50_h,
                     'H100e (5th percentile)': p5_h,
@@ -1088,10 +1118,14 @@ def export_nvidia_owners_csvs(
                     'Number of Units': p50_u,
                     'Number of Units (5th percentile)': p5_u,
                     'Number of Units (95th percentile)': p95_u,
+                    'Total TDP (W)': p50_t,
+                    'Total TDP (W) (5th percentile)': p5_t,
+                    'Total TDP (W) (95th percentile)': p95_t,
                 })
                 tail = _tail_cols(cq)
-                # Insert Chip type before the trailing columns
+                # Insert Chip type and Incomplete before the trailing columns
                 row['Chip type'] = chip
+                row['Incomplete'] = incomplete_flag
                 row.update(tail)
                 by_chip_rows.append(row)
 
@@ -1120,6 +1154,8 @@ def export_nvidia_owners_csvs(
                     row = _base_row(f"{owner} {chip} {cq}", owner, cq)
                     p5_h, p50_h, p95_h = [int(np.percentile(h100e_samples, p)) for p in [5, 50, 95]]
                     p5_u, p50_u, p95_u = [int(np.percentile(unit_samples, p)) for p in [5, 50, 95]]
+                    tdp_w_samples = unit_samples * chip_specs[chip]['tdp']
+                    p5_t, p50_t, p95_t = [int(np.percentile(tdp_w_samples, p)) for p in [5, 50, 95]]
                     row.update({
                         'Compute estimate in H100e (median)': p50_h,
                         'H100e (5th percentile)': p5_h,
@@ -1127,9 +1163,20 @@ def export_nvidia_owners_csvs(
                         'Number of Units': p50_u,
                         'Number of Units (5th percentile)': p5_u,
                         'Number of Units (95th percentile)': p95_u,
+                        'Total TDP (W)': p50_t,
+                        'Total TDP (W) (5th percentile)': p5_t,
+                        'Total TDP (W) (95th percentile)': p95_t,
                     })
                     tail = _tail_cols(cq)
+                    # Check if this quarter has incomplete data coverage
+                    incomplete_flag = ''
+                    if incomplete_note_fn is not None:
+                        start_date, end_date = _calendar_quarter_date_strings(cq)
+                        inc_note = incomplete_note_fn(start_date, end_date)
+                        if inc_note:
+                            incomplete_flag = 'checked'
                     row['Chip type'] = chip
+                    row['Incomplete'] = incomplete_flag
                     row.update(tail)
                     timeline_by_chip_rows.append(row)
         timelines_by_chip_df = pd.DataFrame(timeline_by_chip_rows)
@@ -1139,12 +1186,15 @@ def export_nvidia_owners_csvs(
     cumulative_df = pd.DataFrame(cumulative_rows)
     by_chip_df = pd.DataFrame(by_chip_rows)
 
-    # Remap "Other" to a more descriptive label in exported CSVs
-    _other_label = 'Other (ex-Big 4 hyperscalers & China)'
+    # Add exclusion info to Notes for "Other" rows
+    _excluded = ', '.join(h.replace('China (official)', 'China') for h in hyperscalers)
+    _other_note = f'Excludes {_excluded}'
     for df in [by_chip_df, timelines_by_chip_df]:
         if df is not None:
-            df['Owner'] = df['Owner'].replace('Other', _other_label)
-            df['Name'] = df['Name'].str.replace('Other', _other_label, regex=False)
+            mask = df['Owner'] == 'Other'
+            df.loc[mask, 'Notes'] = df.loc[mask, 'Notes'].apply(
+                lambda n: f'{_other_note}. {n}' if n else _other_note
+            )
 
     timelines_df.to_csv(f'{output_dir}/nvidia_owners_quarters.csv', index=False)
     cumulative_df.to_csv(f'{output_dir}/nvidia_owners_cumulative_totals.csv', index=False)

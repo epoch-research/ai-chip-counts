@@ -1,8 +1,9 @@
-Name,Chip manufacturer,Start date,End date,Number of units (5th percentile),Number of units (median),Number of units (95th percentile),Compute estimate in H100e (5th percentile),Compute estimate in H100e (median),Compute estimate in H100e (95th percentile),Power in MW (5th percentile),Power in MW (median),Power in MW (95th percentile),Notes
-AMD total Q1 2024 to Q1 2024,AMD,1/1/2024,3/31/2024,52257,69134,88830,40891,55200,74032,33,44,56,Estimates generated on: 03-06-2026 16:41
-AMD total Q1 2024 to Q2 2024,AMD,1/1/2024,6/30/2024,135750,167271,204221,139882,173975,215297,94,116,142,Estimates generated on: 03-06-2026 16:41
-AMD total Q1 2024 to Q3 2024,AMD,1/1/2024,9/30/2024,259041,311025,370130,284287,344148,413038,186,223,266,Estimates generated on: 03-06-2026 16:41
-AMD total Q1 2024 to Q4 2024,AMD,1/1/2024,12/31/2024,404632,482651,569881,456658,549726,653064,294,351,415,Estimates generated on: 03-06-2026 16:41
-AMD total Q1 2024 to Q1 2025,AMD,1/1/2024,3/31/2025,504678,607454,720704,587825,712234,851570,376,453,538,Estimates generated on: 03-06-2026 16:41
-AMD total Q1 2024 to Q2 2025,AMD,1/1/2024,6/30/2025,569308,685200,817739,675698,820424,983592,431,519,621,Estimates generated on: 03-06-2026 16:41
-AMD total Q1 2024 to Q3 2025,AMD,1/1/2024,9/30/2025,668562,801450,949954,856330,1025015,1214302,525,629,744,Estimates generated on: 03-06-2026 16:41
+Name,Chip manufacturer,Start date,End date,Number of units (5th percentile),Number of units (median),Number of units (95th percentile),Compute estimate in H100e (5th percentile),Compute estimate in H100e (median),Compute estimate in H100e (95th percentile),Power in MW (5th percentile),Power in MW (median),Power in MW (95th percentile),Incomplete,Notes
+AMD total Q1 2024 to Q1 2024,AMD,1/1/2024,3/31/2024,52257,69134,88830,40891,55200,74032,33,44,56,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q2 2024,AMD,1/1/2024,6/30/2024,135750,167271,204221,139882,173975,215297,94,116,142,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q3 2024,AMD,1/1/2024,9/30/2024,259041,311025,370130,284287,344148,413038,186,223,266,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q4 2024,AMD,1/1/2024,12/31/2024,404632,482651,569881,456658,549726,653064,294,351,415,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q1 2025,AMD,1/1/2024,3/31/2025,504678,607454,720704,587825,712234,851570,376,453,538,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q2 2025,AMD,1/1/2024,6/30/2025,569308,685200,817739,675698,820424,983592,431,519,621,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q3 2025,AMD,1/1/2024,9/30/2025,668562,801450,949954,856330,1025015,1214302,525,629,744,,Estimates generated on: 04-03-2026 12:27
+AMD total Q1 2024 to Q4 2025,AMD,1/1/2024,12/31/2025,790217,930949,1090775,1060773,1244972,1456892,650,762,891,,Estimates generated on: 04-03-2026 12:27
