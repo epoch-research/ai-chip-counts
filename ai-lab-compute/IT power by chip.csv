@@ -1,0 +1,5 @@
+Chip type,Server power rating (W),IT power per server (W),Server size,IT power per GPU (W),Notes
+A100,6500,7410,8,926,"DGX A100 is officially 6500, bumping up 1.14 for IT power overhead (standard assumption)"
+H100,10200,11112,8,1389,"including networking, based on SemiAnalysis"
+GB200,132000,150000,72,2083,https://docs.google.com/spreadsheets/d/1DuXY5E8qC-CqRrP7QgQdai5tUL-Qh4yxZITZVvBTB_o/edit?gid=400445942#gid=400445942
+GB300,140000,160000,72,2222,https://docs.google.com/spreadsheets/d/1DuXY5E8qC-CqRrP7QgQdai5tUL-Qh4yxZITZVvBTB_o/edit?gid=400445942#gid=400445942
