@@ -23,7 +23,7 @@ What it checks per table:
   3. Timestamp     - the "Estimates generated on" stamp in each file, to explain diffs
                      (e.g. the website table was generated from an older model run).
 
-Nvidia and Google (TPU) are wired up today. To extend to Amazon (Trainium), AMD, etc.,
+Nvidia, Google (TPU) and AMD are wired up today. To extend to Amazon (Trainium) etc.,
 add an entry to DESIGNER_CONFIGS: the three published tables share the same layout across
 designers, so only the local file paths, the website "Chip manufacturer" label, and any
 chip-name aliases need to be supplied.
@@ -143,6 +143,21 @@ DESIGNER_CONFIGS = {
             "timelines_by_chip": "csv_export/tpu_calendar_quarter_chip_timelines.csv",
             "cumulative_by_chip": "csv_export/tpu_cumulative_by_chip.csv",
             "cumulative_by_designer": "csv_export/tpu_cumulative_totals.csv",
+        },
+    },
+    "amd": {
+        "web_name": "AMD",
+        # The published AMD cumulative table is the one place on the site that spells chip
+        # types with an "Instinct " prefix - its own Name column and every other designer
+        # and table use the bare name. Drop the prefix so those rows still line up.
+        "chip_aliases": {f"Instinct {c}": c for c in
+                         ("MI250X", "MI300A", "MI300X", "MI308X", "MI325X", "MI350X", "MI355X")},
+        # AMD reports on calendar quarters, so there is a single quarterly timelines file
+        # rather than the separate fiscal/calendar pair Nvidia needs.
+        "local_files": {
+            "timelines_by_chip": "csv_export/amd_chip_timelines.csv",
+            "cumulative_by_chip": "csv_export/amd_cumulative_by_chip.csv",
+            "cumulative_by_designer": "csv_export/amd_cumulative_totals.csv",
         },
     },
 }
