@@ -1,0 +1,71 @@
+{
+  "generated": "2026-09-24 17:33",
+  "tables": {
+    "sales_quarterly_by_chip": {
+      "rows": 160,
+      "sources": {
+        "canonical_export/nvidia": 54,
+        "canonical_export/amd": 35,
+        "canonical_export/tpu": 35,
+        "staging/curated": 24,
+        "canonical_export/trainium": 12
+      }
+    },
+    "sales_cumulative_by_chip": {
+      "rows": 248,
+      "sources": {
+        "canonical_export/nvidia": 92,
+        "canonical_export/tpu": 68,
+        "canonical_export/amd": 48,
+        "staging/curated": 24,
+        "canonical_export/trainium": 16
+      }
+    },
+    "sales_cumulative_by_designer": {
+      "rows": 68,
+      "sources": {
+        "canonical_export/nvidia": 19,
+        "staging/curated": 16,
+        "canonical_export/tpu": 15,
+        "canonical_export/amd": 10,
+        "canonical_export/trainium": 8
+      }
+    },
+    "owners_quarterly_by_chip": {
+      "rows": 386,
+      "sources": {
+        "canonical_export/nvidia_owners": 179,
+        "canonical_export/amd": 78,
+        "canonical_export/tpu": 35,
+        "canonical_export/nvidia_other": 32,
+        "staging/curated": 32,
+        "canonical_export/coreweave": 18,
+        "canonical_export/trainium": 12
+      }
+    },
+    "owners_cumulative_by_chip": {
+      "rows": 524,
+      "sources": {
+        "canonical_export/nvidia_owners": 263,
+        "canonical_export/amd": 85,
+        "canonical_export/tpu": 68,
+        "canonical_export/nvidia_other": 42,
+        "staging/curated": 32,
+        "canonical_export/coreweave": 18,
+        "canonical_export/trainium": 16
+      }
+    },
+    "owners_cumulative_by_designer": {
+      "rows": 217,
+      "sources": {
+        "canonical_export/nvidia_owners": 102,
+        "canonical_export/amd": 33,
+        "staging/curated": 30,
+        "canonical_export/nvidia_other": 17,
+        "canonical_export/tpu": 15,
+        "canonical_export/coreweave": 12,
+        "canonical_export/trainium": 8
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+chip_type,designer,spec_chip,members,aliases
+A100,Nvidia,A100,A100,
+A800,Nvidia,A800,A800,
+H100/H200,Nvidia,H100,H100;H200,H100
+H800,Nvidia,H800,H800,
+H20,Nvidia,H20,H20,
+B200,Nvidia,B200,B200,
+B300,Nvidia,B300,B300,
+MI250X,AMD,Instinct MI250X,Instinct MI250X,Instinct MI250X
+MI300A,AMD,Instinct MI300A,Instinct MI300A,Instinct MI300A
+MI300X,AMD,Instinct MI300X,Instinct MI300X,Instinct MI300X
+MI308X,AMD,Instinct MI308X,Instinct MI308X,Instinct MI308X
+MI325X,AMD,Instinct MI325X,Instinct MI325X,Instinct MI325X
+MI350X,AMD,Instinct MI350X,Instinct MI350X,Instinct MI350X
+MI355X,AMD,Instinct MI355X,Instinct MI355X,Instinct MI355X
+TPU v4,Google,TPU v4,TPU v4,
+TPU v4i,Google,TPU v4i,TPU v4i,
+TPU v5e,Google,TPU v5e,TPU v5e,
+TPU v5p,Google,TPU v5p,TPU v5p,
+TPU v6e,Google,TPU v6e,TPU v6e,
+TPU v7,Google,TPU v7,TPU v7,
+Trainium1,Amazon,Trainium1,Trainium1,Trainium1/Inferentia
+Trainium2,Amazon,Trainium2,Trainium2,
+Ascend 910B,Huawei,Ascend 910B,Ascend 910B,
+Ascend 910C,Huawei,Ascend 910C,Ascend 910C,
+Siyuan 590,Cambricon,Siyuan 590,Siyuan 590,

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Chip Owners</title>
+<link rel="stylesheet" href="hub.css">
+<script src="vendor/d3.min.js"></script>
+</head>
+<body>
+<header class="site">
+  <a class="brand" href="index.html">AI chip data hub <span class="badge">staging</span></a>
+  <nav><a href="ai-chip-sales.html">AI Chip Sales</a><a href="ai-chip-owners.html" class="current">AI Chip Owners</a></nav>
+</header>
+<main class="explorer">
+  <div class="topbar">
+    <div class="tabs" role="tablist"></div>
+    <div class="view-switch"><button data-view="graph">Graph</button><button data-view="table">Table</button></div>
+  </div>
+  <div class="panel">
+    <div class="content">
+      <div class="graph-view">
+        <div class="chart-head">
+          <h1 class="chart-title">AI Chip Owners</h1>
+          <button class="sidebar-toggle" title="Show or hide settings">Settings</button>
+        </div>
+        <div class="chart-subtitle"></div>
+        <div class="chart-row">
+          <div class="chart-wrap"><div class="chart"></div></div>
+          <div class="legend"></div>
+        </div>
+        <p class="footnote"></p>
+      </div>
+      <div class="table-view" hidden></div>
+    </div>
+    <aside class="sidebar"><div class="settings"></div><div class="inspect" hidden></div></aside>
+  </div>
+  <p class="source">Reads the canonical tables in <code>staging/</code>, the local stand-in for the Airtable base. Rebuild them with <code>python3.11 -m pipeline.build_staging</code>.</p>
+</main>
+<script src="core.js"></script>
+<script src="owners.js"></script>
+</body>
+</html>

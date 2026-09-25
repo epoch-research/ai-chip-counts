@@ -326,6 +326,57 @@ TOTALS_START_LABEL = "Q4 2022"
 TOTALS_CUTOFF = datetime(2022, 12, 31)
 
 
+def tpu_prices(results):
+    """The model's own price per TPU, in USD, for the canonical cost columns.
+
+    The model prices each version at its manufacturing cost marked up by Broadcom's
+    margin, adjusted each quarter as the margin changes. This averages that price over
+    the quarters the version sold in, weighted by median units, so a chip sold mostly in
+    lower-margin quarters gets the lower price. The chip_types table's list prices are
+    not used for TPUs: TPU v4i has none, and the rest run 6-15% above the model's.
+    """
+    inputs = results["inputs"]
+    base_quarter = results["quarters"][0]
+    # Seeded so the prices, and so the cost columns, are identical run to run.
+    sq.set_seed(RANDOM_SEED)
+    prices = {}
+    for version in results["versions"]:
+        base = inputs["tpu_cost"][version] / (1 - inputs["margin_by_quarter"][base_quarter])
+        base_median = float(np.median(base @ 20000))
+        units = {q: float(np.median(results["quarterly_samples"][q][version])) for q in results["quarters"]}
+        total = sum(units.values())
+        weighted = (sum(base_median * results["deflation_by_quarter"][q] * u for q, u in units.items()) / total
+                    if total else base_median)
+        prices[get_tpu_name(version)] = round(weighted)
+    return prices
+
+
+def export_canonical(results):
+    """Write the canonical sales and owners tables (docs/schema.md) to canonical_export/tpu/.
+
+    Built from the sample-based calendar interpolation, so the quarterly numbers can
+    differ slightly from tpu_calendar_quarter_chip_timelines.csv, which interpolates
+    summary statistics instead. Google owns every TPU it ships.
+    """
+    from pipeline import chip_schema as cs
+
+    revenue_df = results["inputs"]["revenue_df"]
+    quarterly = {cq: {get_tpu_name(v): s for v, s in chips.items()}
+                 for cq, chips in results["calendar_quarterly_samples"].items()}
+    running = {cq: {get_tpu_name(v): s for v, s in chips.items()}
+               for cq, chips in results["calendar_running_totals_samples"].items()}
+    inc_q, inc_c = cs.incomplete_quarters(
+        quarterly, pd.to_datetime(revenue_df['start_date'].iloc[0], format='%m/%d/%Y'),
+        pd.to_datetime(revenue_df['end_date'].iloc[-1], format='%m/%d/%Y'))
+    note = "Based on Broadcom fiscal quarters."
+    prices = tpu_prices(results)
+    tables = cs.sales_tables("Google", quarterly=quarterly, cumulative=running,
+                             incomplete=inc_q, incomplete_cumulative=inc_c, note=note, prices=prices)
+    tables.update(cs.owners_tables("Google", {"Google": quarterly}, {"Google": running},
+                                   incomplete=inc_q, incomplete_cumulative=inc_c, note=note, prices=prices))
+    return cs.write_tables("tpu", tables)
+
+
 def export_csvs(results):
     """Write all TPU estimate CSVs (csv_export/ and owners_csv_export/); return paths."""
     inputs = results["inputs"]

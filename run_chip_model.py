@@ -60,6 +60,9 @@ def run_family(module, web_tables):
     print("#" * 78)
     results = module.run_model()
     exported = module.export_csvs(results)
+    # The canonical tables (docs/schema.md) feed staging/ and the HTML hub in hub/.
+    if hasattr(module, "export_canonical"):
+        module.export_canonical(results)
 
     if module.DESIGNER not in vcs.DESIGNER_CONFIGS:
         print(f"\n  {module.FAMILY}: no validation config for designer '{module.DESIGNER}' - skipping validation")
