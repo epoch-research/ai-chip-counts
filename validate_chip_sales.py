@@ -160,6 +160,17 @@ DESIGNER_CONFIGS = {
             "cumulative_by_designer": "csv_export/amd_cumulative_totals.csv",
         },
     },
+    "amazon": {
+        "web_name": "Amazon",
+        # Trainium chip types match between the website and the local exports.
+        "chip_aliases": {},
+        # Trainium is modeled directly on calendar quarters: one quarterly timelines file.
+        "local_files": {
+            "timelines_by_chip": "csv_export/trainium_chip_timelines.csv",
+            "cumulative_by_chip": "csv_export/trainium_cumulative_by_chip.csv",
+            "cumulative_by_designer": "csv_export/trainium_cumulative_totals.csv",
+        },
+    },
 }
 
 
