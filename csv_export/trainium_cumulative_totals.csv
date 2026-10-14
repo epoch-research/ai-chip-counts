@@ -1,9 +1,11 @@
-Name,Chip manufacturer,Start date,End date,Compute estimate in H100e (median),H100e (5th percentile),H100e (95th percentile),Number of Units,Number of Units (5th percentile),Number of Units (95th percentile),Power in MW (median),Power in MW (5th percentile),Power in MW (95th percentile),Source / Link,Notes
-Amazon cumulative Trainium through Q1 2024,Amazon,1/1/2024,3/31/2024,32836,18425,62883,125513,62977,265015,40.5,21.3,82.4,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q2 2024,Amazon,1/1/2024,6/30/2024,78230,47616,138875,270423,143178,549213,90.3,51.1,174.5,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q3 2024,Amazon,1/1/2024,9/30/2024,154207,101611,246659,461032,265875,881871,163.5,101.6,291.5,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q4 2024,Amazon,1/1/2024,12/31/2024,306330,212809,438612,766739,489708,1333606,294.7,199.0,467.0,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q1 2025,Amazon,1/1/2024,3/31/2025,445742,357294,576176,981510,707123,1544446,401.0,307.9,572.7,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q2 2025,Amazon,1/1/2024,6/30/2025,608627,520165,738597,1226824,953420,1792385,524.5,432.5,698.1,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q3 2025,Amazon,1/1/2024,9/30/2025,799373,701270,933147,1517199,1237506,2078956,669.9,571.5,843.3,,Estimates generated on: 03-31-2026 14:36
-Amazon cumulative Trainium through Q4 2025,Amazon,1/1/2024,12/31/2025,1020727,907525,1164343,1856963,1559233,2421792,840.0,730.1,1016.4,,Estimates generated on: 03-31-2026 14:36
+Name,Chip manufacturer,Start date,End date,Number of units (5th percentile),Number of units (median),Number of units (95th percentile),Compute estimate in H100e (5th percentile),Compute estimate in H100e (median),Compute estimate in H100e (95th percentile),Power in MW (5th percentile),Power in MW (median),Power in MW (95th percentile),Incomplete,Notes
+Amazon cumulative Trainium through Q1 2024,Amazon,1/1/2024,3/31/2024,62587,124984,265339,18373,32654,62798,21.2,40.2,82.5,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q2 2024,Amazon,1/1/2024,6/30/2024,143250,268797,549092,47241,77978,138732,51.2,89.9,174.5,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q3 2024,Amazon,1/1/2024,9/30/2024,267044,458841,877997,101398,153989,246284,101.2,162.9,289.8,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q4 2024,Amazon,1/1/2024,12/31/2024,489036,764581,1326123,213534,306270,438789,199.0,294.1,466.7,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q1 2025,Amazon,1/1/2024,3/31/2025,708817,979339,1542260,357567,445095,576587,308.2,400.7,573.7,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q2 2025,Amazon,1/1/2024,6/30/2025,954731,1226575,1791362,520130,608662,740141,432.3,524.7,696.7,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q3 2025,Amazon,1/1/2024,9/30/2025,1238028,1515513,2083600,704873,798994,931579,573.0,669.8,843.7,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q4 2025,Amazon,1/1/2024,12/31/2025,1561480,1853910,2424103,911037,1021181,1163924,732.1,839.0,1014.6,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q1 2026,Amazon,1/1/2024,3/31/2026,1885183,2214080,2800445,1111648,1253123,1435833,889.9,1017.7,1210.1,,Estimates generated on: 10-14-2026 14:34
+Amazon cumulative Trainium through Q2 2026,Amazon,1/1/2024,6/30/2026,2194353,2597427,3235792,1343063,1562425,1898986,1052.8,1229.0,1490.3,,Estimates generated on: 10-14-2026 14:34
