@@ -3,3 +3,4 @@ __pycache__/
 # Airtable credentials and pre-push snapshots of Airtable rows
 .env
 staging/_snapshots/
+*.egg-info/

@@ -5,24 +5,48 @@ For more information, see:
 https://epoch.ai/data/ai-chip-sales
 https://epoch.ai/data/ai-chip-owners
 
-nvidia_estimates, tpu_estimates, amd_estimates, etc generate estimates for chip sales by designer
+## Layout
 
-nvidia_owners allocates Nvidia chips to hyperscaler and official Chinese owners using a revenue-based model. Other Nvidia owners are modeled separately in nvidia_owners_other, with the exception of smuggled Chinese chips, which are handled separately in v_diversion_and_resale.
+```
+models/              one module per chip family (tpu.py, trainium.py so far) plus shared helpers (chip_utils.py)
+notebooks/           research notebooks; the Nvidia and AMD ones still hold their model logic
+scripts/             standalone estimates: xAI chip counts, smuggled chips to China (v_diversion_and_resale.py)
+inputs/              hand-maintained input CSVs; most inputs come from Google Sheets
+csv_export/, owners_csv_export/   legacy exports for the hand import into Airtable
+outputs/canonical/   each family's tables in the new schema (docs/schema.md)
+outputs/intermediate/  files one notebook writes for another (the Nvidia "Other" remainder)
+pipeline/            the schema, the staging build, validation, the Airtable push, checking tools
+staging/             local copy of what Airtable should hold
+hub/                 HTML rebuild of the AI Chip Sales and AI Chip Owners explorers, reading staging/
+docs/                schema.md (the schema), current_schema.md (the old one), refactor_plan.md
+```
+
+Install the dependencies with `pip install -e .` (add `[dev]` to run notebooks headlessly or
+push to Airtable). Run everything from the repo root. Notebooks opened in Jupyter move there
+in their first cell.
+
+`notebooks/nvidia.ipynb`, `notebooks/amd.ipynb` and the `models/` modules estimate chip
+sales by designer. `notebooks/nvidia_owners.ipynb` allocates Nvidia chips to hyperscaler and
+official Chinese owners using a revenue-based model. Other Nvidia owners are modeled
+separately in `notebooks/nvidia_owners_other.ipynb`, except smuggled Chinese chips, which are
+handled in `scripts/v_diversion_and_resale.py`.
 
 ## Running and validating models
 
-Chip-family models are being moved out of notebooks into `<family>_model.py` modules
-(TPU so far). For those families:
+Chip-family models are being moved out of notebooks into `models/<family>.py` modules
+(TPU and Trainium so far). For those families:
 
 - `python run_chip_model.py tpu` (or `all`) reruns the model, rewrites the
-  `csv_export/` and `owners_csv_export/` files, and validates the exports against the
-  published dataset, ending with a per-family PASS/REVIEW summary.
-- `<family>_estimates.ipynb` is the research notebook: it imports the model module and
+  `csv_export/` and `owners_csv_export/` files and `outputs/canonical/<family>/`, and
+  validates the exports against the published dataset, ending with a per-family PASS/REVIEW
+  summary.
+- `notebooks/<family>.ipynb` is the research notebook: it imports the model module and
   renders tables, charts, and sensitivity checks without owning the model logic.
-- `python validate_chip_sales.py --designer all` (or the `validate_chip_sales.ipynb`
-  notebook) compares the local CSVs against the currently published dataset on its own.
+- `python -m pipeline.validate --designer all` (or `notebooks/validate.ipynb`) compares the
+  local CSVs against the currently published dataset on its own.
 
-Families without a model module yet (Nvidia, AMD, Amazon) still run via their notebooks.
+Families without a model module yet (Nvidia, AMD, the owners notebooks) still run via their
+notebooks.
 
 ## The new back end (branch `backend-refactor`)
 
@@ -31,15 +55,7 @@ The models now also write the public tables themselves, in one consistent schema
 legacy `csv_export/` files are still written, so the old process keeps working until the
 website switches over.
 
-```
-pipeline/            the schema in code (chip_schema.py), the staging build, the Airtable push, checking tools
-canonical_export/    each model family's output tables, in the new schema
-staging/             local copy of what Airtable should hold: the six public tables plus reference tables
-hub/                 HTML rebuild of the AI Chip Sales and AI Chip Owners explorers, reading staging/
-docs/                schema.md (the schema), current_schema.md (the old one), refactor_plan.md
-```
-
-The data flows in one direction: model → `canonical_export/<family>/` → `staging/` →
+The data flows in one direction: model → `outputs/canonical/<family>/` → `staging/` →
 Airtable → website. Six new Airtable tables (sales and owners, each quarterly by chip,
 cumulative by chip and cumulative by designer) sit in the same base as the old ones. Their
 IDs are in `pipeline/airtable_tables.json`, so they can be renamed freely in Airtable.
@@ -52,7 +68,7 @@ commit the token or paste it anywhere else.
 
 ### Updating a model and Airtable
 
-1. **Update the inputs.** Edit the Google Sheet or `data_inputs/` file the model reads, such as a
+1. **Update the inputs.** Edit the Google Sheet or `inputs/` file the model reads, such as a
    new quarter's revenue. For a new chip, first add it to `chip_types` in Airtable. Then
    add it to `staging/chip_types.csv`, which is a snapshot, and to
    `pipeline/chip_type_map.csv`, which says which chip_types row supplies its specs.
@@ -62,11 +78,11 @@ commit the token or paste it anywhere else.
 
    ```bash
    python3.11 run_chip_model.py tpu
-   python3.11 -m pipeline.tools.run_notebook nvidia_chip_estimates.ipynb
+   python3.11 -m pipeline.tools.run_notebook notebooks/nvidia.ipynb
    ```
   (note that all chip families will transition to the run_chip_model script; this is in progress)
-   Use `run_chip_model.py` for model modules (TPU), and `run_notebook` for notebook families
-   (`nvidia_chip_estimates`, `amd_estimates`, `trainium_estimates`, `nvidia_owners`). Or open
+   Use `run_chip_model.py` for model modules (TPU, Trainium), and `run_notebook` for notebook
+   families (`notebooks/nvidia.ipynb`, `amd.ipynb`, `nvidia_owners.ipynb`). Or open
    the notebook in Jupyter and run all cells. To see which legacy numbers moved, and to undo
    changes that are only timestamps, run
    `python3.11 -m pipeline.tools.diff_exports --restore --only <prefix>`.
@@ -107,7 +123,7 @@ commit the token or paste it anywhere else.
    It saves the current Airtable rows to `staging/_snapshots/` first, then writes. Running it
    again should report nothing to change.
 
-7. **Commit** the model changes, `canonical_export/` and `staging/` together, so the repo
+7. **Commit** the model changes, `outputs/canonical/` and `staging/` together, so the repo
    records what was pushed.
 
 ### Who owns what
@@ -129,7 +145,7 @@ commit the token or paste it anywhere else.
 In the model, call `chip_schema.sales_tables(...)` or `owners_tables(...)` with the unit
 samples (`{quarter: {chip: samples}}`). Then pass the result to
 `chip_schema.write_tables("<family>", tables)`. The library computes H100e, power and cost,
-the percentiles, Names and dates. See the last cell of `trainium_estimates.ipynb` for a short
+the percentiles, Names and dates. See `export_canonical` in `models/trainium.py` for a short
 example. Then rebuild staging and push as above.
 
 ### Status

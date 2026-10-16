@@ -15,10 +15,10 @@ line to divide by a chip price; instead the model is built from a handful of anc
 Methodology write-up (working draft tab):
 https://docs.google.com/document/d/16j2nTJls-jIQ2gRBAo7Wq-fZUwV0UgRZP8sDuBL0XZ0/edit?tab=t.yjy8uqrdkmkf
 
-This module holds the model itself; trainium_estimates.ipynb wraps it for tables, charts,
+This module holds the model itself; notebooks/trainium.ipynb wraps it for tables, charts,
 and sanity checks, and run_chip_model.py uses it for the run-and-validate workflow. The
 three csv_export outputs feed the published dataset at https://epoch.ai/data/ai-chip-sales
-(see validate_chip_sales.py).
+(see pipeline/validate.py).
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ import squigglepy as sq
 from squigglepy.numbers import K, M
 
 # Identity used by run_chip_model.py: FAMILY names the csv_export file prefix, and
-# DESIGNER is the key into validate_chip_sales.DESIGNER_CONFIGS.
+# DESIGNER is the key into pipeline.validate.DESIGNER_CONFIGS.
 FAMILY = "trainium"
 DESIGNER = "amazon"
 
@@ -272,7 +272,7 @@ CUMULATIVE_START_DATE = get_quarter_dates(QUARTERS[0])[0]
 
 
 def export_canonical(results):
-    """Write the canonical sales and owners tables (docs/schema.md) to canonical_export/trainium/.
+    """Write the canonical sales and owners tables (docs/schema.md) to outputs/canonical/trainium/.
 
     The schema library takes the per-quarter unit samples, one array per chip, and works out
     H100e, power and cost itself from the shared chip-spec table. Amazon owns every Trainium

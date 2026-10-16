@@ -2,8 +2,8 @@
 Aggregate xAI data center data into cumulative chip counts and compute power over time.
 
 Inputs:
-  - data_inputs/xai_chip_quantities.csv  (chip-level snapshots per data center)
-  - data_inputs/xai_datacenter_timelines.csv  (running totals of H100e / power per data center)
+  - inputs/xai_chip_quantities.csv  (chip-level snapshots per data center)
+  - inputs/xai_datacenter_timelines.csv  (running totals of H100e / power per data center)
 
 Outputs (printed as copy-able CSVs):
   1. Cumulative by chip type per quarter
@@ -26,7 +26,7 @@ import os
 import io
 
 # ---------------------------------------------------------------------------
-# Chip specs (matching nvidia_estimates.ipynb FALLBACK_SPECS)
+# Chip specs (matching notebooks/nvidia.ipynb FALLBACK_SPECS)
 # ---------------------------------------------------------------------------
 CHIP_SPECS = {
     'H100':  {'tops': 1979, 'tdp': 700},
@@ -268,7 +268,7 @@ def get_power_at_date(timeline_records, dc, target_date):
 # ---------------------------------------------------------------------------
 def aggregate_xai_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    input_dir = os.path.join(base_dir, 'data_inputs')
+    input_dir = os.path.join(base_dir, '..', 'inputs')
 
     chip_records = load_chip_quantities(os.path.join(input_dir, 'xai_chip_quantities.csv'))
     timeline_records = load_timelines(os.path.join(input_dir, 'xai_datacenter_timelines.csv'))

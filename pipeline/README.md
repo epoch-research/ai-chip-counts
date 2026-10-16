@@ -5,10 +5,11 @@ assembles `staging/`, and the tools that check it. Run everything from the repo 
 
 | File | Role |
 |---|---|
-| `chip_schema.py` | The schema in code. Models pass unit samples; it computes H100e, power and cost per sample and writes `canonical_export/<family>/`. |
+| `chip_schema.py` | The schema in code. Models pass unit samples; it computes H100e, power and cost per sample and writes `outputs/canonical/<family>/`. |
 | `chip_type_map.csv` | Every chip label the results may use, its aliases, and which `staging/chip_types.csv` row supplies its specs. |
+| `validate.py` | Compares the legacy CSV exports with the published dataset; `run_chip_model.py` calls it after each model run. Was `validate_chip_sales.py` at the repo root. |
 | `push_airtable.py` | Pushes staging's six tables to Airtable: creates missing tables and fields, upserts on Name, deletes stale rows, writes only modelled rows. Dry run unless `--write`. Finds tables by the IDs recorded in `airtable_tables.json`, so they can be renamed in Airtable. |
-| `build_staging.py` | Merges `canonical_export/`, the converted legacy-only sources and `staging/curated/` into `staging/`. |
+| `build_staging.py` | Merges `outputs/canonical/`, the converted legacy-only sources and `staging/curated/` into `staging/`. |
 | `tools/build_viewer.py` | Writes `staging/viewer-sales.html` and `viewer-owners.html`: the hub explorers with the data built in, openable from disk. Runs at the end of every build. |
 | `tools/run_notebook.py` | Runs a model notebook headlessly, without writing outputs into it. |
 | `tools/diff_exports.py` | After a rerun, lists legacy CSVs whose numbers moved and restores those that differ only in timestamps. |

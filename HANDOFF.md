@@ -5,7 +5,7 @@ Cross-session state for ai-chip-counts. Keep under about 40 lines; git history i
 ## In flight (branch `backend-refactor`, uncommitted as of 2026-09-24)
 
 - **Canonical schema** (`docs/schema.md`, decided 2026-09-24) lives in `pipeline/chip_schema.py`.
-  Each model family passes unit samples through it into `canonical_export/<family>/`; legacy
+  Each model family passes unit samples through it into `outputs/canonical/<family>/`; legacy
   CSV exports and the hand import are untouched.
 - **`pipeline/build_staging.py`** merges those with the converted Nvidia "Other" and CoreWeave
   files and `staging/curated/` into `staging/`, the stand-in for Airtable. `hub/` and

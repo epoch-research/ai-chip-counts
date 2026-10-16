@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.11
 """Execute a notebook headlessly without writing outputs back into it.
 
-    python3.11 -m pipeline.tools.run_notebook nvidia_chip_estimates.ipynb [more.ipynb ...]
+    python3.11 -m pipeline.tools.run_notebook notebooks/nvidia.ipynb [more.ipynb ...]
 
 Each notebook runs from the repo root (its exports use relative paths) on a kernel
 backed by the same interpreter as this script, so squigglepy is available whatever

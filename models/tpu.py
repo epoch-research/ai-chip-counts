@@ -6,10 +6,10 @@ cost marked up by Broadcom's margin). Monte Carlo throughout, with chip prices
 presampled once per version and partially correlated across versions so that price
 uncertainty propagates into cumulative totals instead of averaging out.
 
-This module holds the model itself; tpu_estimates.ipynb wraps it for visualization
+This module holds the model itself; notebooks/tpu.ipynb wraps it for visualization
 and sensitivity analysis, and run_chip_model.py uses it for the run-and-validate
 workflow. The three csv_export outputs feed the published dataset at
-https://epoch.ai/data/ai-chip-sales (see validate_chip_sales.py).
+https://epoch.ai/data/ai-chip-sales (see pipeline/validate.py).
 
 Data inputs come from a Google Sheet (quarterly TPU revenue on Broadcom's fiscal
 calendar, production mix, costs):
@@ -27,7 +27,7 @@ import requests
 import squigglepy as sq
 from squigglepy.numbers import B
 
-from chip_estimates_utils import (
+from models.chip_utils import (
     normalize_shares,
     estimate_cumulative_chip_sales,
     aggregate_by_chip_type,
@@ -38,7 +38,7 @@ from chip_estimates_utils import (
 )
 
 # Identity used by run_chip_model.py: FAMILY names the csv_export file prefix, and
-# DESIGNER is the key into validate_chip_sales.DESIGNER_CONFIGS.
+# DESIGNER is the key into pipeline.validate.DESIGNER_CONFIGS.
 FAMILY = "tpu"
 DESIGNER = "google"
 
@@ -352,7 +352,7 @@ def tpu_prices(results):
 
 
 def export_canonical(results):
-    """Write the canonical sales and owners tables (docs/schema.md) to canonical_export/tpu/.
+    """Write the canonical sales and owners tables (docs/schema.md) to outputs/canonical/tpu/.
 
     Built from the sample-based calendar interpolation, so the quarterly numbers can
     differ slightly from tpu_calendar_quarter_chip_timelines.csv, which interpolates

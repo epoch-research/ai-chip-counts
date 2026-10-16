@@ -27,20 +27,20 @@ rows) removed. The models read chip specs from `chip_types.csv` through
 ## Refreshing it
 
 ```bash
-python3.11 run_chip_model.py tpu                          # TPU: model, legacy CSVs, canonical tables
-python3.11 -m pipeline.tools.run_notebook nvidia_chip_estimates.ipynb amd_estimates.ipynb \
-    trainium_estimates.ipynb nvidia_owners.ipynb           # the notebook families
+python3.11 run_chip_model.py all                          # TPU, Trainium: model, legacy CSVs, canonical tables
+python3.11 -m pipeline.tools.run_notebook notebooks/nvidia.ipynb notebooks/amd.ipynb \
+    notebooks/nvidia_owners.ipynb                          # the notebook families
 python3.11 -m pipeline.build_staging                      # merge everything into staging/
 python3.11 -m http.server 8765                            # then open http://localhost:8765/hub/
 ```
 
-Each model writes its own canonical tables to `canonical_export/<family>/` alongside its
+Each model writes its own canonical tables to `outputs/canonical/<family>/` alongside its
 legacy CSVs. `pipeline/build_staging.py` then:
 
 1. converts the two legacy sources with no samples behind them, the Nvidia "Other"
-   remainder and CoreWeave, into `canonical_export/nvidia_other/` and
-   `canonical_export/coreweave/`;
-2. merges every `canonical_export/` family with `curated/`;
+   remainder and CoreWeave, into `outputs/canonical/nvidia_other/` and
+   `outputs/canonical/coreweave/`;
+2. merges every `outputs/canonical/` family with `curated/`;
 3. refuses to write if two sources claim the same row, a chip type is missing from the
    chip-type map, or a table breaks the schema.
 

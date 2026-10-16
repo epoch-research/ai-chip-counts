@@ -9,7 +9,7 @@ what the Airtable base would hold after a push, and what the HTML hub in hub/ re
 
 Rows come from three kinds of source:
 
-1. canonical_export/<family>/, written by the models from their Monte Carlo samples
+1. outputs/canonical/<family>/, written by the models from their Monte Carlo samples
    (see chip_schema.py). Most rows come from here.
 2. Legacy exports with no samples behind them, converted here on every run:
    the Nvidia "Other" remainder (nvidia_owners_other.ipynb refits distributions to
@@ -173,13 +173,13 @@ def convert_legacy_only():
 
 
 def load_sources():
-    """{table: [(source label, canonical frame), ...]} across canonical_export and curated rows."""
+    """{table: [(source label, canonical frame), ...]} across outputs/canonical and curated rows."""
     sources = {t: [] for t in cs.TABLES}
     for folder in sorted(p for p in cs.CANONICAL_EXPORT_DIR.iterdir() if p.is_dir()):
         for t in cs.TABLES:
             f = folder / f"{t}.csv"
             if f.exists():
-                sources[t].append((f"canonical_export/{folder.name}", pd.read_csv(f, dtype=str, keep_default_na=False)))
+                sources[t].append((f"outputs/canonical/{folder.name}", pd.read_csv(f, dtype=str, keep_default_na=False)))
     for t in cs.TABLES:
         f = CURATED / f"{t}.csv"
         if f.exists():

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate local AI chip-sales model outputs against Epoch's published website data.
 
-The notebooks in this repo (e.g. nvidia_chip_estimates.ipynb) run a Monte Carlo model and
+The notebooks in this repo (e.g. notebooks/nvidia.ipynb) run a Monte Carlo model and
 write per-chip and cumulative estimates to csv_export/. Those CSVs are what ultimately feed
 the public dataset at https://epoch.ai/data/ai-chip-sales. This module downloads the
 currently published dataset (in memory, nothing is written to disk) and compares it, cell
@@ -29,10 +29,10 @@ designers, so only the local file paths, the website "Chip manufacturer" label, 
 chip-name aliases need to be supplied.
 
 Usage:
-    python validate_chip_sales.py                 # validate Nvidia, print a text report
-    python validate_chip_sales.py --designer all  # validate every configured designer
+    python -m pipeline.validate                   # validate Nvidia, print a text report
+    python -m pipeline.validate --designer all    # validate every configured designer
 
-The companion notebook validate_chip_sales.ipynb wraps the same functions and renders
+The companion notebook notebooks/validate.ipynb wraps the same functions and renders
 the report inline: coverage/timestamp and per-metric summary tables, 2D percent-diff
 tables (chip x quarter), and a cumulative time-series figure.
 """

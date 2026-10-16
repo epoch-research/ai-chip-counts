@@ -32,7 +32,7 @@ import pandas as pd
 REPO = Path(__file__).resolve().parent.parent
 CHIP_TYPE_MAP_PATH = REPO / "pipeline" / "chip_type_map.csv"
 CHIP_TYPES_PATH = REPO / "staging" / "chip_types.csv"
-CANONICAL_EXPORT_DIR = REPO / "canonical_export"
+CANONICAL_EXPORT_DIR = REPO / "outputs" / "canonical"
 
 # 8-bit dense operations per second of one H100; H100e = chip ops / this.
 H100_OPS = 1979e12
@@ -434,7 +434,7 @@ def validate(table, df):
 
 
 def write_tables(family, tables, out_dir=CANONICAL_EXPORT_DIR):
-    """Write one family's canonical tables to canonical_export/<family>/<table>.csv."""
+    """Write one family's canonical tables to outputs/canonical/<family>/<table>.csv."""
     folder = Path(out_dir) / family
     folder.mkdir(parents=True, exist_ok=True)
     paths = []

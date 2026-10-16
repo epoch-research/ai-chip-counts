@@ -6,16 +6,17 @@ family it reruns the Monte Carlo model, rewrites the csv_export/ (and owners_csv
 files, and validates the exports against the currently published dataset at
 https://epoch.ai/data/ai-chip-sales, finishing with a per-family summary table.
 
-Families are discovered by convention: any *_model.py in the repo root that exposes
+Families are discovered by convention: any module in models/ that exposes
     FAMILY        - family name used on the command line (e.g. "tpu")
-    DESIGNER      - key into validate_chip_sales.DESIGNER_CONFIGS (e.g. "google")
+    DESIGNER      - key into pipeline.validate.DESIGNER_CONFIGS (e.g. "google")
     run_model()   - run the simulation, return a results dict
     export_csvs(results) - write the CSV exports, return the written paths
-Adding a chip family means dropping in a new <family>_model.py; nothing to register here.
+Adding a chip family means dropping in a new models/<family>.py; nothing to register here.
+Modules without these names, such as models/chip_utils.py, are skipped.
 
 Usage:
     python run_chip_model.py tpu    # one family
-    python run_chip_model.py all    # every family with a *_model.py module
+    python run_chip_model.py all    # every family in models/
 
 One family failing (a moved Google Sheet, a schema change) does not stop the others;
 it shows up as ERROR in the summary. Exit code is 0 only if every family runs and
@@ -26,22 +27,26 @@ from __future__ import annotations
 import argparse
 import glob
 import importlib
+import os
 import sys
 import traceback
 
-import validate_chip_sales as vcs
+from pipeline import validate as vcs
 
 
 def discover_model_modules():
-    """Import every *_model.py in the repo root; return {family: module}."""
+    """Import every module in models/; return {family: module} for the model families."""
     modules = {}
-    for path in sorted(glob.glob("*_model.py")):
-        # This script's own name matches the glob; it is not a model module.
-        if path == "run_chip_model.py":
+    for path in sorted(glob.glob("models/*.py")):
+        name = os.path.basename(path)[:-3]
+        if name == "__init__":
             continue
-        module = importlib.import_module(path[:-3])
+        module = importlib.import_module(f"models.{name}")
+        # Shared helpers like chip_utils have none of these and are skipped quietly.
         required = ("FAMILY", "DESIGNER", "run_model", "export_csvs")
         missing = [attr for attr in required if not hasattr(module, attr)]
+        if len(missing) == len(required):
+            continue
         if missing:
             print(f"warning: ignoring {path}: missing {', '.join(missing)}")
             continue
@@ -88,12 +93,12 @@ def run_family(module, web_tables):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("family", help="chip family to run (from *_model.py modules), or 'all'")
+    parser.add_argument("family", help="chip family to run (from models/), or 'all'")
     args = parser.parse_args(argv)
 
     modules = discover_model_modules()
     if not modules:
-        parser.error("no *_model.py modules found in the repo root")
+        parser.error("no model families found in models/")
 
     if args.family == "all":
         selected = list(modules.values())

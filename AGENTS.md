@@ -70,19 +70,24 @@ All notebooks export estimates to `csv_export/` as CSVs. Common column definitio
 - **Notes**: includes a generated timestamp, e.g. `"Estimates generated on: 01-28-2026 12:48"`
 - **Source / Link, Last Modified By, Last Modified**: typically left blank (populated downstream)
 
+## Repo layout
+
+- `models/` (family modules, `chip_utils.py`), `notebooks/`, `scripts/` (standalone estimates), `inputs/`, `outputs/canonical/` and `outputs/intermediate/`, `pipeline/`, `staging/`, `hub/`, `docs/`. Legacy exports stay in `csv_export/` and `owners_csv_export/` until the website switch.
+- Run everything from the repo root. Notebooks' first cell moves there when Jupyter starts them in `notebooks/`.
+
 ## Notebook patterns
 
 - **Common flow**: load data from Google Sheets → define squigglepy distributions → run Monte Carlo (N_SAMPLES=5000) → interpolate fiscal→calendar quarters → compute running totals → compute H100e → export CSVs
-- **Key utility functions** in `chip_estimates_utils.py`: `estimate_cumulative_chip_sales`, `interpolate_samples_to_calendar_quarters`, `compute_running_totals`, `compute_h100e_samples`, `export_nvidia_owners_csvs`, `make_incomplete_note_fn`
+- **Key utility functions** in `models/chip_utils.py`: `estimate_cumulative_chip_sales`, `interpolate_samples_to_calendar_quarters`, `compute_running_totals`, `compute_h100e_samples`, `export_nvidia_owners_csvs`, `make_incomplete_note_fn`
 - **Sample arrays**: results are stored as `{quarter: {chip_type: np.array(N_SAMPLES)}}` dicts, preserving per-sample correlations across chips/quarters
 - **Owner notebooks** (`*_owners.ipynb`): extend the base chip estimation by allocating chips to owners (hyperscalers, China, Other). Export to `owners_csv_export/` with an extra `Owner` column
-- **Data inputs**: `data_inputs/` has local CSVs; revenue/price/ownership data is loaded from Google Sheets URLs
+- **Data inputs**: `inputs/` has local CSVs; revenue/price/ownership data is loaded from Google Sheets URLs
 - **Chip types**: Nvidia uses `['A100', 'A800', 'H100/H200', 'H800', 'H20', 'B200', 'B300']`. China-spec chips are A800, H800, H20
 - **H100e conversion**: `units * (chip_TOPS / 1979)` where CHIP_SPECS dict maps chip name → {TOPS, TDP}
 
 ## Model modules and the run-and-validate workflow
 
-- **Model modules** (`<family>_model.py`: TPU and Trainium so far): the model logic extracted from the family notebook. Each exposes `FAMILY` (CLI name / csv prefix), `DESIGNER` (key into `validate_chip_sales.DESIGNER_CONFIGS`), `run_model(n_samples, ..., inputs=None, seed=42)` returning a results dict of sample structures, and `export_csvs(results)`. Models are seeded, so reruns are reproducible.
-- **Runner**: `python run_chip_model.py <family>|all` discovers `*_model.py` modules, reruns each model, rewrites its CSVs, validates against the published dataset, and prints a per-family PASS/REVIEW summary (nonzero exit on drift). Adding a family = adding a `<family>_model.py`; nothing to register.
-- **Research notebooks** (`<family>_estimates.ipynb` for migrated families): import the model module, run it, and render tables/charts/sensitivity checks. They no longer own model logic. `load_inputs()` once, then pass `inputs=` to repeated `run_model` calls (e.g. sensitivity reruns) to avoid re-fetching Google Sheets.
-- **Validation**: `validate_chip_sales.py` compares local csv_export files against the published website zip (in memory, no file outputs); `validate_chip_sales.ipynb` renders it for all configured designers. Wire up a new designer by adding a `DESIGNER_CONFIGS` entry (local file paths, website manufacturer label, chip-name aliases).
+- **Model modules** (`models/<family>.py`: TPU and Trainium so far): the model logic extracted from the family notebook. Each exposes `FAMILY` (CLI name / csv prefix), `DESIGNER` (key into `pipeline.validate.DESIGNER_CONFIGS`), `run_model(n_samples, ..., inputs=None, seed=42)` returning a results dict of sample structures, and `export_csvs(results)`. Models are seeded, so reruns are reproducible.
+- **Runner**: `python run_chip_model.py <family>|all` discovers the families in `models/`, reruns each model, rewrites its CSVs, validates against the published dataset, and prints a per-family PASS/REVIEW summary (nonzero exit on drift). Adding a family = adding a `models/<family>.py`; nothing to register.
+- **Research notebooks** (`notebooks/<family>.ipynb`): import the model module, run it, and render tables/charts/sensitivity checks. They no longer own model logic. `load_inputs()` once, then pass `inputs=` to repeated `run_model` calls (e.g. sensitivity reruns) to avoid re-fetching Google Sheets.
+- **Validation**: `pipeline/validate.py` compares local csv_export files against the published website zip (in memory, no file outputs); `notebooks/validate.ipynb` renders it for all configured designers. Wire up a new designer by adding a `DESIGNER_CONFIGS` entry (local file paths, website manufacturer label, chip-name aliases).

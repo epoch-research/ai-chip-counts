@@ -19,7 +19,7 @@ os.chdir(Path(__file__).resolve().parents[2])
 # --only nvidia_ limits the check to files whose name starts with that prefix, so
 # parallel reruns of different families never touch each other's files.
 prefixes = sys.argv[sys.argv.index("--only") + 1:] if "--only" in sys.argv else []
-changed = subprocess.run(["git", "diff", "--name-only", "--", "csv_export", "owners_csv_export", "data_inputs"],
+changed = subprocess.run(["git", "diff", "--name-only", "--", "csv_export", "owners_csv_export", "outputs/intermediate"],
                          capture_output=True, text=True).stdout.split()
 if prefixes:
     changed = [f for f in changed if any(f.split("/")[-1].startswith(p) for p in prefixes)]
