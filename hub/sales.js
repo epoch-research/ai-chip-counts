@@ -109,9 +109,8 @@
     const annual = s.timePeriod === 'annual' && s.chartType === 'bar';
     const cumulative = s.cumulative;
     const chartType = cumulative ? s.chartType : 'bar';
-    // Designer totals come straight from their own table, except cost: a designer total is
-    // blank when any of its chips lacks a price, so cost sums the priced chips instead.
-    const byDesignerTable = cumulative && s.colorBy === 'designer' && metric !== 'cost';
+    // Designer totals come straight from their own table.
+    const byDesignerTable = cumulative && s.colorBy === 'designer';
     const filterDesigner = s.colorBy === 'chipType' && s.designer !== 'all' ? s.designer : null;
     const showAll = s.showAllData || !!filterDesigner;
     const share = s.proportion === 'share' && s.colorBy !== 'none';

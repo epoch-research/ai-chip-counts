@@ -235,9 +235,10 @@ from Airtable, like `staging/chip_types.csv`, and the push tool refuses to write
 
 ## Implementation notes
 
-- **Cost with a missing price.** Trainium1 and Siyuan 590 have no price in `chip_types`. Their
-  own cost is blank, and so is any designer total that includes them, rather than an
-  undercount. The sales hub sums priced chips for its designer cost view, as the live site does.
+- **Chips with a missing spec.** Some chips lack a spec in `chip_types`: Trainium1 and Siyuan 590
+  have no price, and TPU v8i has no TDP. A chip's own row leaves that metric blank. Designer totals
+  sum the chips that have the spec, a slight undercount, and the row's Notes name the chips left
+  out (e.g. "Cost (USD) excludes Trainium1 (no price)."). The live site likewise sums the priced chips for cost.
 - **Rows with no samples behind them** (the Nvidia "Other" remainder, CoreWeave, the curated
   rows) are converted from percentiles by `pipeline/build_staging.py`. Their designer-level cost is the
   sum of per-chip costs, and the row's Notes say so. Point estimates keep blank percentiles.

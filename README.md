@@ -31,6 +31,25 @@ official Chinese owners using a revenue-based model. Other Nvidia owners are mod
 separately in `notebooks/nvidia_owners_other.ipynb`, except smuggled Chinese chips, which are
 handled in `scripts/v_diversion_and_resale.py`.
 
+## Input data sheets
+
+These are the inputs the models read from outside the repo at run time. Local inputs live in `data_inputs/`.
+
+**Nvidia** (`nvidia_chip_estimates.ipynb`, `nvidia_owners.ipynb`)
+- [Nvidia revenue and prices sheet](https://docs.google.com/spreadsheets/d/1Yhu87Rw--9tviAuBwg_luL3OFAFkdHdVfli6tN215Xk/edit): the [revenue tab](https://docs.google.com/spreadsheets/d/1Yhu87Rw--9tviAuBwg_luL3OFAFkdHdVfli6tN215Xk/edit?gid=0#gid=0) holds quarterly data-center revenue, and the [prices tab](https://docs.google.com/spreadsheets/d/1Yhu87Rw--9tviAuBwg_luL3OFAFkdHdVfli6tN215Xk/edit?gid=1819303346#gid=1819303346) holds GPU prices. Both notebooks read it.
+- [Nvidia ownership sheet](https://docs.google.com/spreadsheets/d/13GNAPRlzAm8nvaxCb6NDxu6-ozbZFDlcSJ335fEBsYk/edit?gid=1898856645#gid=1898856645): each hyperscaler's share of Nvidia DC revenue by quarter. Only the owners model reads it.
+- `nvidia_owners_other.ipynb` reads only local files: `data_inputs/`, plus the Nvidia sales and owners exports.
+
+**AMD** (`amd_estimates.ipynb`, which covers both sales and owners). All inputs are tabs of the [AMD inputs sheet](https://docs.google.com/spreadsheets/d/1RfjL98gsSe9QeXDnBOraticvS-s13XmKvHv_dwwa3W8/edit):
+- [quarterly revenue](https://docs.google.com/spreadsheets/d/1RfjL98gsSe9QeXDnBOraticvS-s13XmKvHv_dwwa3W8/edit?gid=0#gid=0)
+- [production mix](https://docs.google.com/spreadsheets/d/1RfjL98gsSe9QeXDnBOraticvS-s13XmKvHv_dwwa3W8/edit?gid=141507805#gid=141507805)
+- [GPU prices](https://docs.google.com/spreadsheets/d/1RfjL98gsSe9QeXDnBOraticvS-s13XmKvHv_dwwa3W8/edit?gid=1614409636#gid=1614409636)
+- [ownership shares](https://docs.google.com/spreadsheets/d/1RfjL98gsSe9QeXDnBOraticvS-s13XmKvHv_dwwa3W8/edit?gid=1443829275#gid=1443829275)
+
+**TPU** (`tpu_model.py`, `tpu_estimates.ipynb`). The [TPU inputs sheet](https://docs.google.com/spreadsheets/d/1eGk2AAdewEO81vx-YBRTtdlhZvAMstY7vZuHrf3sgNI/edit) has three tabs, `TPU_Revenue` (Broadcom TPU revenue by fiscal quarter), `Production_Mix` and `prices` (manufacturing costs). The model assigns every TPU to Google, so it has no ownership sheet.
+
+**Shared across all three.** Chip specs (8-bit TOPS and TDP, used for H100e and power) come from `chip_types.csv` inside the published [ai_chip_sales.zip](https://epoch.ai/data/ai_chip_sales.zip). If that download fails, each model falls back to hardcoded specs.
+
 ## Running and validating models
 
 Chip-family models are being moved out of notebooks into `models/<family>.py` modules

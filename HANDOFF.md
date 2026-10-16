@@ -19,6 +19,13 @@ Cross-session state for ai-chip-counts. Keep under about 40 lines; git history i
 
 - 2026-10-16: merged main (Trainium H1 2026, Colab cells). `trainium_model.export_canonical`
   replaces the notebook's export cell; Trainium3 added to `pipeline/chip_type_map.csv`.
+- 2026-09-30: TPU rerun with Broadcom Q3 FY26 and the new TPU v8i. v8i's 8-bit OP/s is
+  Google's FP4 figure (1.01e16, kept deliberately) and it has no TDP, so its own power is blank.
+  Legacy TPU by-chip exports now carry `Total TDP (W)` columns for the manual import, and
+  `pipeline/validate.py` compares them. Not yet pushed to the new Airtable tables.
+- 2026-09-30: `chip_schema` designer totals undercount instead of blanking when a chip lacks a
+  spec (H100e, power or cost), naming the chips left out in Notes. Curated Cambricon rows keep
+  Airtable's blank cost.
 - 2026-09-24: schema decisions settled; ownership rule in `docs/schema.md`, section 8.
   Converted and curated rows now keep their source Notes and generation stamps, so
   rebuilding staging without new model output changes nothing.

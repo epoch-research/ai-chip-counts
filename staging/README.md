@@ -54,8 +54,10 @@ python3.11 -m pipeline.tools.compare_canonical nvidia
 
 - **Designer-level cost for converted rows** is the sum of the per-chip cost rows. The
   median is exact only if the chips move together, and each such row says so in Notes.
-- **Chips with no price** in `chip_types.csv`, Trainium1 and Siyuan 590, have blank cost.
-  A designer total that includes them has blank cost too, rather than an undercount.
+- **Chips with a missing spec** in `chip_types.csv` (Trainium1 and Siyuan 590 have no price,
+  TPU v8i no TDP) have that metric blank on their own rows. Modelled designer totals leave them
+  out, a slight undercount named in Notes. Curated designer rows (Cambricon) keep whatever
+  Airtable holds, which is blank cost.
 - **`curated/` was snapshotted once** by `pipeline/tools/snapshot_curated_rows.py`, which also
   corrected one typo in the published data (see the Notes on the Cambricon Q2 2024 row). It is
   the transition copy that seeds the new Airtable tables; after that, curated rows are edited

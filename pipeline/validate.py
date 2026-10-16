@@ -81,6 +81,9 @@ TABLE_SPECS = {
             ("Compute estimate in H100e (median)", "Compute estimate in H100e (median)", "H100e median"),
             ("H100e (5th percentile)", "H100e (5th percentile)", "H100e p5"),
             ("H100e (95th percentile)", "H100e (95th percentile)", "H100e p95"),
+            ("Total TDP (W)", "Total TDP (W)", "TDP W median"),
+            ("Total TDP (W) (5th percentile)", "Total TDP (W) (5th percentile)", "TDP W p5"),
+            ("Total TDP (W) (95th percentile)", "Total TDP (W) (95th percentile)", "TDP W p95"),
         ],
     },
     "cumulative_by_chip": {
@@ -94,6 +97,9 @@ TABLE_SPECS = {
             ("Compute estimate in H100e (median)", "H100e compute power (median)", "H100e median"),
             ("Compute estimate in H100e (5th percentile)", "H100e compute power (5th percentile)", "H100e p5"),
             ("Compute estimate in H100e (95th percentile)", "H100e compute power (95th percentile)", "H100e p95"),
+            ("Total TDP (W) (median)", "Total TDP (W) (median)", "TDP W median"),
+            ("Total TDP (W) (5th percentile)", "Total TDP (W) (5th percentile)", "TDP W p5"),
+            ("Total TDP (W) (95th percentile)", "Total TDP (W) (95th percentile)", "TDP W p95"),
         ],
     },
     "cumulative_by_designer": {

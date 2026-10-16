@@ -65,6 +65,7 @@ TPU_NAME_MAP = {
     'v5p': 'TPU v5p',
     'v6e': 'TPU v6e',
     'v7': 'TPU v7',
+    'v8i': 'TPU v8i',
 }
 
 # Fallback specs if the epoch.ai download fails (TOPS from 8-bit OP/s, TDP in watts)
@@ -76,6 +77,7 @@ FALLBACK_SPECS = {
     'v5p': {'tops': 918,  'tdp': 540},
     'v6e': {'tops': 1836, 'tdp': 380},
     'v7':  {'tops': 4614, 'tdp': 960},
+    'v8i': {'tops': 10100, 'tdp': None},  # Google hasn't published a TDP; power is left blank
 }
 
 H100_TOPS = 1979  # reference for H100-equivalent calculation
@@ -422,6 +424,10 @@ def export_csvs(results):
         print(f"Exported {len(df)} rows to {path}")
         written.append(path)
 
+    def pct(samples, p):
+        """Integer percentile, or blank when the samples are missing (a chip with no TDP)."""
+        return '' if samples is None else int(np.percentile(samples, p))
+
     # --- Fiscal quarter timelines (csv_export) ---
     quarter_dates_lookup = {}
     for _, row in revenue_df.iterrows():
@@ -466,6 +472,7 @@ def export_csvs(results):
             stats = results["calendar_results"][quarter][version]
             if stats['p50'] > 0:
                 h100e_factor = specs[version]['tops'] / H100_TOPS
+                tdp = specs[version]['tdp']
                 rows.append({
                     'Name': f"{quarter} - {get_tpu_name(version)}",
                     'Chip manufacturer': 'Google',
@@ -477,6 +484,9 @@ def export_csvs(results):
                     'Number of Units': int(stats['p50']),
                     'Number of Units (5th percentile)': int(stats['p5']),
                     'Number of Units (95th percentile)': int(stats['p95']),
+                    'Total TDP (W)': '' if tdp is None else int(stats['p50'] * tdp),
+                    'Total TDP (W) (5th percentile)': '' if tdp is None else int(stats['p5'] * tdp),
+                    'Total TDP (W) (95th percentile)': '' if tdp is None else int(stats['p95'] * tdp),
                     'Chip type': get_tpu_name(version),
                     'Incomplete': 'checked' if incomplete_note else '',
                     'Notes': with_incomplete(incomplete_note),
@@ -497,6 +507,7 @@ def export_csvs(results):
             if arr.sum() > 0:
                 display_name = f"TPU {version}"
                 h100e_arr = arr * (specs[version]['tops'] / H100_TOPS)
+                tdp_w = arr * specs[version]['tdp'] if specs[version]['tdp'] is not None else None
                 rows.append({
                     'Name': f"{display_name} {CUMULATIVE_START_LABEL} to {cq}",
                     'Chip manufacturer': 'Google',
@@ -509,6 +520,9 @@ def export_csvs(results):
                     'Compute estimate in H100e (5th percentile)': int(np.percentile(h100e_arr, 5)),
                     'Compute estimate in H100e (median)': int(np.percentile(h100e_arr, 50)),
                     'Compute estimate in H100e (95th percentile)': int(np.percentile(h100e_arr, 95)),
+                    'Total TDP (W) (5th percentile)': pct(tdp_w, 5),
+                    'Total TDP (W) (median)': pct(tdp_w, 50),
+                    'Total TDP (W) (95th percentile)': pct(tdp_w, 95),
                     'Incomplete': 'checked' if incomplete_note else '',
                     'Notes': with_incomplete(incomplete_note),
                 })
@@ -526,7 +540,7 @@ def export_csvs(results):
             if arr.sum() > 0:
                 display_name = f"TPU {version}"
                 h100e_samples = arr * (specs[version]['tops'] / H100_TOPS)
-                tdp_w = arr * specs[version]['tdp']
+                tdp_w = arr * specs[version]['tdp'] if specs[version]['tdp'] is not None else None
                 rows.append({
                     'Name': f"Google {display_name} cumulative through {cq}",
                     'Chip manufacturer': 'Google',
@@ -539,9 +553,9 @@ def export_csvs(results):
                     'Number of Units': int(np.percentile(arr, 50)),
                     'Number of Units (5th percentile)': int(np.percentile(arr, 5)),
                     'Number of Units (95th percentile)': int(np.percentile(arr, 95)),
-                    'Total TDP (W)': int(np.percentile(tdp_w, 50)),
-                    'Total TDP (W) (5th percentile)': int(np.percentile(tdp_w, 5)),
-                    'Total TDP (W) (95th percentile)': int(np.percentile(tdp_w, 95)),
+                    'Total TDP (W)': pct(tdp_w, 50),
+                    'Total TDP (W) (5th percentile)': pct(tdp_w, 5),
+                    'Total TDP (W) (95th percentile)': pct(tdp_w, 95),
                     'Chip type': display_name,
                     'Incomplete': 'checked' if incomplete_note else '',
                     'Source / Link': '',
@@ -559,7 +573,7 @@ def export_csvs(results):
             if arr.sum() > 0:
                 display_name = f"TPU {version}"
                 h100e_samples = arr * (specs[version]['tops'] / H100_TOPS)
-                tdp_w = arr * specs[version]['tdp']
+                tdp_w = arr * specs[version]['tdp'] if specs[version]['tdp'] is not None else None
                 rows.append({
                     'Name': f"Google {display_name} {cq}",
                     'Chip manufacturer': 'Google',
@@ -572,9 +586,9 @@ def export_csvs(results):
                     'Number of Units': int(np.percentile(arr, 50)),
                     'Number of Units (5th percentile)': int(np.percentile(arr, 5)),
                     'Number of Units (95th percentile)': int(np.percentile(arr, 95)),
-                    'Total TDP (W)': int(np.percentile(tdp_w, 50)),
-                    'Total TDP (W) (5th percentile)': int(np.percentile(tdp_w, 5)),
-                    'Total TDP (W) (95th percentile)': int(np.percentile(tdp_w, 95)),
+                    'Total TDP (W)': pct(tdp_w, 50),
+                    'Total TDP (W) (5th percentile)': pct(tdp_w, 5),
+                    'Total TDP (W) (95th percentile)': pct(tdp_w, 95),
                     'Chip type': display_name,
                     'Incomplete': 'checked' if incomplete_note else '',
                     'Source / Link': '',
@@ -598,7 +612,9 @@ def export_csvs(results):
             units_total += arr
             if version in specs:
                 h100e_total += arr * (specs[version]['tops'] / H100_TOPS)
-                power_total_w += arr * specs[version]['tdp']
+                # A chip with no TDP (v8i) is left out: a slight power undercount
+                if specs[version]['tdp'] is not None:
+                    power_total_w += arr * specs[version]['tdp']
         power_mw = power_total_w / 1e6
 
         rows.append({
@@ -650,7 +666,9 @@ def export_csvs(results):
             units_total += arr
             if version in specs:
                 h100e_total += arr * (specs[version]['tops'] / H100_TOPS)
-                power_total_w += arr * specs[version]['tdp']
+                # A chip with no TDP (v8i) is left out: a slight power undercount
+                if specs[version]['tdp'] is not None:
+                    power_total_w += arr * specs[version]['tdp']
 
         rows.append({
             'Name': f"Google TPU total {TOTALS_START_LABEL} to {cq}",

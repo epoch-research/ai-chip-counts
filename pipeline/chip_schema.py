@@ -223,33 +223,56 @@ def _percentiles(samples):
     return {s: float(np.percentile(samples, p)) for s, p in PERCENTILES.items()}
 
 
+def _per_chip_factors(chip, prices):
+    """Per-unit H100e, power (MW) and cost for a chip; None where chip_types lacks the spec."""
+    spec = chip_specs()[chip]
+    return {
+        "h100e": spec["h100e_per_chip"],
+        "power_mw": spec["tdp_w"] / 1e6 if spec["tdp_w"] else None,
+        "cost_usd": (prices or {}).get(chip, spec["price_usd"]),
+    }
+
+
+def chips_missing_specs(samples_by_chip, prices=None):
+    """{metric: [chips with units that lack the spec it needs]}, only for metrics with any."""
+    missing = {}
+    for chip, units in samples_by_chip.items():
+        if not np.asarray(units).any():
+            continue
+        for m, factor in _per_chip_factors(chip, prices).items():
+            if factor is None:
+                missing.setdefault(m, []).append(chip)
+    return missing
+
+
+def missing_specs_note(samples_by_chip, prices=None):
+    """Note for a total that leaves out chips with no spec, e.g. "Cost (USD) excludes Trainium1 (no price)."."""
+    spec_word = {"h100e": "8-bit OP/s", "power_mw": "TDP", "cost_usd": "price"}
+    return " ".join(f"{_METRIC_WORDS[m]} excludes {', '.join(chips)} (no {spec_word[m]})."
+                    for m, chips in chips_missing_specs(samples_by_chip, prices).items())
+
+
 def metric_values(samples_by_chip, prices=None):
     """{chip: unit samples} -> {'units_p5': ..., ..., 'cost_usd_p95': ...}.
 
-    All chips are summed sample by sample. A metric is left blank when any chip with
-    units lacks the spec it needs, rather than silently counting that chip as zero.
-    `prices` ({chip: USD}) replaces the chip_types price for models that estimate
-    their own, such as the TPU model.
+    All chips are summed sample by sample. A chip that lacks the spec a metric needs is
+    left out of that metric's total, a slight undercount that the row's Notes name (see
+    missing_specs_note). The metric is blank only when no chip with units has the spec,
+    as for a single-chip row of such a chip. `prices` ({chip: USD}) replaces the
+    chip_types price for models that estimate their own, such as the TPU model.
     """
-    specs = chip_specs()
-    prices = prices or {}
     n = len(next(iter(samples_by_chip.values())))
     totals = {m: np.zeros(n) for m in METRICS}
-    known = {m: True for m in METRICS}
+    has_spec = {m: False for m in METRICS}  # does any chip with units have the spec?
     for chip, units in samples_by_chip.items():
         units = np.asarray(units, dtype=float)
-        spec = specs[chip]
         totals["units"] += units
-        per_chip = {
-            "h100e": spec["h100e_per_chip"],
-            "power_mw": spec["tdp_w"] / 1e6 if spec["tdp_w"] else None,
-            "cost_usd": prices.get(chip, spec["price_usd"]),
-        }
-        for m, factor in per_chip.items():
-            if factor is None:
-                known[m] = known[m] and not units.any()
-            else:
+        for m, factor in _per_chip_factors(chip, prices).items():
+            if factor is not None:
                 totals[m] += units * factor
+                has_spec[m] = has_spec[m] or units.any()
+    missing = chips_missing_specs(samples_by_chip, prices)
+    known = {m: m == "units" or has_spec[m] or m not in missing for m in METRICS}
     out = {}
     for m in METRICS:
         pct = _percentiles(totals[m]) if known[m] else dict.fromkeys(STATS)
@@ -357,7 +380,9 @@ def _build(prefix, designer, quarterly, cumulative, incomplete, incomplete_cumul
                                     "name": row_name(table, designer, q, chip, owner, order[0])})
             if chips:
                 table = f"{prefix}_cumulative_by_designer"
+                missing = missing_specs_note(chips, prices)
                 rows[table].append({**base, **common, **metric_values(chips, prices),
+                                    "notes": f"{missing} {notes}" if missing else notes,
                                     "name": row_name(table, designer, q, None, owner, order[0])})
 
     return {t: pd.DataFrame(r, columns=table_columns(t)) for t, r in rows.items()}
