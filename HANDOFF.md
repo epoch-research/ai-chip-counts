@@ -33,7 +33,7 @@ Cross-session state for ai-chip-counts. Keep under about 40 lines; git history i
   "… cumulative Q1 2022 through Q3 2025". The rehearsal base's tables predate this.
 - 2026-09-25: real base seeded with `push_airtable --transition`; read-back matches staging
   cell for cell, and the six old tables are untouched.
-- 2026-09-23: TPU cost uses the model's own prices (`tpu_model.tpu_prices`, via `prices=`).
+- 2026-09-23: TPU cost uses the model's own prices (`models/tpu.py` `tpu_prices`, via `prices=`).
 - 2026-09-22: `nvidia_owners.ipynb` drops quarters with no ownership shares (Edu's fix) and
   bases its incomplete flag on the last kept quarter; AMD canonical owners likewise stop at
   the last year with shares. Legacy outputs are unchanged.

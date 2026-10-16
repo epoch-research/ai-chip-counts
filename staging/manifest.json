@@ -1,42 +1,42 @@
 {
-  "generated": "2026-10-16 18:35",
+  "generated": "2026-10-16 14:47",
   "tables": {
     "sales_quarterly_by_chip": {
-      "rows": 163,
+      "rows": 166,
       "sources": {
         "outputs/canonical/nvidia": 54,
+        "outputs/canonical/tpu": 38,
         "outputs/canonical/amd": 35,
-        "outputs/canonical/tpu": 35,
         "staging/curated": 24,
         "outputs/canonical/trainium": 15
       }
     },
     "sales_cumulative_by_chip": {
-      "rows": 253,
+      "rows": 261,
       "sources": {
         "outputs/canonical/nvidia": 92,
-        "outputs/canonical/tpu": 68,
+        "outputs/canonical/tpu": 76,
         "outputs/canonical/amd": 48,
         "staging/curated": 24,
         "outputs/canonical/trainium": 21
       }
     },
     "sales_cumulative_by_designer": {
-      "rows": 70,
+      "rows": 71,
       "sources": {
         "outputs/canonical/nvidia": 19,
+        "outputs/canonical/tpu": 16,
         "staging/curated": 16,
-        "outputs/canonical/tpu": 15,
         "outputs/canonical/amd": 10,
         "outputs/canonical/trainium": 10
       }
     },
     "owners_quarterly_by_chip": {
-      "rows": 389,
+      "rows": 392,
       "sources": {
         "outputs/canonical/nvidia_owners": 179,
         "outputs/canonical/amd": 78,
-        "outputs/canonical/tpu": 35,
+        "outputs/canonical/tpu": 38,
         "outputs/canonical/nvidia_other": 32,
         "staging/curated": 32,
         "outputs/canonical/coreweave": 18,
@@ -44,11 +44,11 @@
       }
     },
     "owners_cumulative_by_chip": {
-      "rows": 529,
+      "rows": 537,
       "sources": {
         "outputs/canonical/nvidia_owners": 263,
         "outputs/canonical/amd": 85,
-        "outputs/canonical/tpu": 68,
+        "outputs/canonical/tpu": 76,
         "outputs/canonical/nvidia_other": 42,
         "staging/curated": 32,
         "outputs/canonical/trainium": 21,
@@ -56,13 +56,13 @@
       }
     },
     "owners_cumulative_by_designer": {
-      "rows": 219,
+      "rows": 220,
       "sources": {
         "outputs/canonical/nvidia_owners": 102,
         "outputs/canonical/amd": 33,
         "staging/curated": 30,
         "outputs/canonical/nvidia_other": 17,
-        "outputs/canonical/tpu": 15,
+        "outputs/canonical/tpu": 16,
         "outputs/canonical/coreweave": 12,
         "outputs/canonical/trainium": 10
       }
