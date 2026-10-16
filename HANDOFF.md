@@ -17,6 +17,8 @@ Cross-session state for ai-chip-counts. Keep under about 40 lines; git history i
 
 ## Recent changes
 
+- 2026-10-16: merged main (Trainium H1 2026, Colab cells). `trainium_model.export_canonical`
+  replaces the notebook's export cell; Trainium3 added to `pipeline/chip_type_map.csv`.
 - 2026-09-24: schema decisions settled; ownership rule in `docs/schema.md`, section 8.
   Converted and curated rows now keep their source Notes and generation stamps, so
   rebuilding staging without new model output changes nothing.
@@ -40,6 +42,9 @@ Cross-session state for ai-chip-counts. Keep under about 40 lines; git history i
   `pipeline/push_airtable.py` is interim, for testing the new tables and website switch.
 
 ## Known production issues (staging is correct)
+
+- Except: `staging/curated/` stops at Q4 2025, but Huawei and Cambricon sales through Q2 2026
+  were added in Airtable on Oct 8-9 (old and new tables). Needs the pull-from-Airtable step.
 
 - AMD power is 0 in the published cumulative-by-chip table: its chips link to the empty
   `MI300X`-style stub rows in chip_types. Delete the stubs before the transition.

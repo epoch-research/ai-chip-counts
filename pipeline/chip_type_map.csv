@@ -21,6 +21,7 @@ TPU v6e,Google,TPU v6e,TPU v6e,
 TPU v7,Google,TPU v7,TPU v7,
 Trainium1,Amazon,Trainium1,Trainium1,Trainium1/Inferentia
 Trainium2,Amazon,Trainium2,Trainium2,
+Trainium3,Amazon,Trainium3,Trainium3,
 Ascend 910B,Huawei,Ascend 910B,Ascend 910B,
 Ascend 910C,Huawei,Ascend 910C,Ascend 910C,
 Siyuan 590,Cambricon,Siyuan 590,Siyuan 590,
