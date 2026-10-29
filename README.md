@@ -23,3 +23,17 @@ Chip-family models are being moved out of notebooks into `<family>_model.py` mod
   notebook) compares the local CSVs against the currently published dataset on its own.
 
 Families without a model module yet (Nvidia, AMD, Amazon) still run via their notebooks.
+
+## Website data
+
+epoch.ai reads the AI chip sales and owners tables from S3, not from Airtable directly.
+`.github/workflows/data.yml` runs `build.py` every hour (at :20), which exports the published
+Airtable views to `output/`, checks them against `datapackage.yaml` (`tests/`), and uploads
+them to `s3://epoch-datahub/ai-chip-counts/`. The website's hourly data update picks them up.
+
+Airtable is still where the data is edited: upload the notebooks' estimates and edit the
+hand-kept tables (Huawei, Cambricon, chip types, organizations) there as before.
+If you add, rename or remove a column in a published Airtable view, update `datapackage.yaml`
+to match, or the check fails and the upload stops until it does.
+
+To run the export locally: `AIRTABLE_READ_TOKEN=... uv run python build.py && uv run pytest`.
