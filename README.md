@@ -1,9 +1,6 @@
 # ai-chip-counts
-Code for estimating quantities of AI chips
-
-For more information, see:
-https://epoch.ai/data/ai-chip-sales
-https://epoch.ai/data/ai-chip-owners
+This repository models AI chip quantities, producing the numbers in Epoch AI's [AI Chip Sales](https://epoch.ai/data/ai-chip-sales) and
+[AI Chip Owners](https://epoch.ai/data/ai-chip-owners) data explorers.
 
 ## Layout
 
