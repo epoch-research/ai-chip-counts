@@ -1,0 +1,78 @@
+name: Data
+
+# Copies the published tables from the AI chip sales Airtable base to S3, where epoch.ai reads
+# them. Airtable stays where the data is edited, so this runs on a schedule to pick up changes.
+# Pull requests upload to a preview folder that only website previews read; main uploads to
+# the repo's production folder.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # Avoids minute :00, when the website's hourly data pipeline starts.
+  schedule:
+    - cron: "20 * * * *"
+
+permissions: {}
+
+concurrency:
+  group: data-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  data:
+    name: Export, check and upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PRODUCTION: ${{ github.ref == 'refs/heads/main' }}
+      PREVIEW: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      - name: Export from Airtable
+        env:
+          AIRTABLE_READ_TOKEN: ${{ secrets.AIRTABLE_READ_TOKEN }}
+        run: uv run python build.py
+
+      - name: Check
+        run: uv run pytest
+
+      # No AWS secrets: AWS trusts GitHub's word for which repo and branch is running. Runs on
+      # main get the repo's role, which can only change the repo's folder, and pull requests get
+      # its -preview role, which can only change its preview folders.
+      - name: Log in to AWS
+        id: aws
+        if: env.PRODUCTION == 'true' || env.PREVIEW == 'true'
+        # Until the roles exist, a pull request skips its preview upload instead of failing.
+        continue-on-error: ${{ env.PRODUCTION != 'true' }}
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.DATAHUB_UPDATE_AWS_ACCOUNT_ID }}:role/epoch-gh-actions-datahub-${{ github.event.repository.name }}${{ env.PRODUCTION != 'true' && '-preview' || '' }}
+          aws-region: ${{ vars.DATAHUB_UPDATE_AWS_REGION }}
+
+      - name: Explain the skipped preview upload
+        if: steps.aws.outcome == 'failure'
+        run: echo "::warning::Skipped the preview upload because the AWS login failed. The repo needs its AWS roles first."
+
+      - name: Upload to S3
+        if: steps.aws.outcome == 'success'
+        env:
+          S3_BUCKET: ${{ vars.DATAHUB_UPDATE_S3_BUCKET }}
+        run: |
+          repo="${GITHUB_REPOSITORY#*/}"
+          if [ "$PRODUCTION" = true ]; then folder="$repo"; else folder="previews/$repo/$GITHUB_HEAD_REF"; fi
+          uv run --locked --group upload python .github/scripts/upload_to_s3.py "s3://$S3_BUCKET/$folder"
+          echo "Uploaded to \`s3://$S3_BUCKET/$folder/\`." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$PRODUCTION" != true ]; then
+            echo "To see it on a website preview, add \`$repo: $GITHUB_HEAD_REF\` to \`data/data-previews.yml\` in a website PR." >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -1,0 +1,604 @@
+# Every table this repo publishes, with a title, type and description for each column.
+# The format is a Frictionless Data Package: https://datapackage.org/standard/data-package/
+# tests/test_datapackage.py checks that the CSVs in output/ match it.
+name: ai-chip-counts
+title: AI chip sales and owners
+description: Epoch AI's estimates of how many AI chips each designer has sold and who owns them, with 5th percentile, median and 95th percentile estimates. Exported from the AI chip sales Airtable base, where the notebooks' estimates are uploaded and some tables are edited by hand.
+resources:
+- name: organizations
+  path: ai_chip_sales_organizations.csv
+  title: Organizations
+  description: Chip designers and compute owners that appear in the chip sales and owners tables.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Organization name.
+    - name: Country
+      title: Country
+      type: string
+      description: Country of headquarters.
+    - name: Type
+      title: Type
+      type: string
+      description: Role in AI compute supply, e.g. Chip designer or Compute owner.
+    - name: Chip types
+      title: Chip types
+      type: string
+      description: Link to Chip Type table. Chip models designed by this organization.
+- name: chip_types
+  path: ai_chip_sales_chip_types.csv
+  title: Chip types
+  description: AI accelerator models, with the specifications used to convert chip counts to H100-equivalents, power and cost.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Chip model name.
+    - name: ML Hardware (linked)
+      title: ML Hardware (linked)
+      type: string
+      description: Link to relevant record in [ML hardware](/data/machine-learning-hardware) dataset.
+    - name: Designer
+      title: Designer
+      type: string
+      description: The (primary) designer of the chip type.
+    - name: Primarily for Chinese market
+      title: Primarily for Chinese market
+      type: boolean
+      description: Indicates whether the chip was primarily sold in the mainland China market.
+    - name: TDP (W) (from ML Hardware (linked))
+      title: TDP (W) (from ML Hardware (linked))
+      type: number
+      description: Thermal design power in watts, from the chip's ML Hardware record.
+    - name: 16-bit FLOP/s
+      title: 16-bit FLOP/s
+      type: number
+      description: Peak dense 16-bit floating point operations per second.
+    - name: 8-bit OP/s
+      title: 8-bit OP/s
+      type: number
+      description: Peak dense 8-bit operations per second.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Notes for context.
+    - name: Memory
+      title: Memory
+      type: number
+      description: Memory capacity in bytes.
+    - name: Memory bandwidth
+      title: Memory bandwidth
+      type: number
+      description: Memory bandwidth in bytes per second.
+    - name: H100e
+      title: H100e
+      type: number
+      description: Computing power relative to the Nvidia H100 in terms of 8-bit OP/s.
+    - name: Cost per chip (approx.)
+      title: Cost per chip (approx.)
+      type: number
+      description: Approximate price of one chip in US dollars.
+    - name: Release date
+      title: Release date
+      type: date
+      description: When the chip was released.
+    - name: Unofficial estimated TDP (W)
+      title: Unofficial estimated TDP (W)
+      type: number
+      description: Epoch AI's estimate of the chip's thermal design power in watts, where the designer hasn't published one.
+- name: timelines_by_chip
+  path: ai_chip_sales_timelines_by_chip.csv
+  title: Timelines by chip
+  description: Estimated chips shipped each quarter (or fiscal period), by designer and chip type.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Brief identifier.
+    - name: Chip manufacturer
+      title: Chip manufacturer
+      type: string
+      description: The company that designs, produces, or sells the relevant chips.
+    - name: Start date
+      title: Start date
+      type: date
+      description: Start date of the time period.
+    - name: End date
+      title: End date
+      type: date
+      description: End date of the time period.
+    - name: Incomplete
+      title: Incomplete
+      type: boolean
+      description: True when the estimate doesn't cover the whole period, for example because the company's fiscal quarters don't line up with calendar quarters.
+    - name: Number of Units
+      title: Number of Units
+      type: number
+      description: Median estimate of the number of chips.
+    - name: Number of Units (5th percentile)
+      title: Number of Units (5th percentile)
+      type: number
+      description: 5th percentile estimate of number of units.
+    - name: Number of Units (95th percentile)
+      title: Number of Units (95th percentile)
+      type: number
+      description: 95th percentile estimate of number of units.
+    - name: Compute estimate in H100e (median)
+      title: Compute estimate in H100e (median)
+      type: number
+      description: Median estimate of the chips' computing power in H100-equivalents (peak 8-bit operations per second relative to an Nvidia H100).
+    - name: H100e (5th percentile)
+      title: H100e (5th percentile)
+      type: number
+      description: 5th percentile estimate of H100e computing power.
+    - name: H100e (95th percentile)
+      title: H100e (95th percentile)
+      type: number
+      description: 95th percentile estimate of H100e computing power.
+    - name: Source / Link
+      title: Source / Link
+      type: string
+      description: Link to more information, e.g. a methodology document.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Relevant notes for context.
+    - name: Chip type
+      title: Chip type
+      type: string
+      description: Name or short text description of the relevant chip type(s), since chips in this record may span more than one chip type.
+    - name: Last Modified By
+      title: Last Modified By
+      type: string
+      description: Person who last changed the record in Airtable.
+    - name: Last Modified
+      title: Last Modified
+      type: datetime
+      description: When the record was last changed in Airtable.
+    - name: Chip type (linked)
+      title: Chip type (linked)
+      type: string
+      description: The chip type's record in the Chip types table.
+    - name: Chip TDP (W)
+      title: Chip TDP (W)
+      type: number
+      description: Thermal design power of one chip, in watts, from the Chip types table.
+    - name: Total TDP (W)
+      title: Total TDP (W)
+      type: number
+      description: Total thermal design power of the chips in watts (median number of units times chip TDP), excluding server and facility overheads.
+    - name: Total TDP (W) (5th percentile)
+      title: Total TDP (W) (5th percentile)
+      type: number
+      description: 5th percentile of the total TDP (W) estimate.
+    - name: Total TDP (W) (95th percentile)
+      title: Total TDP (W) (95th percentile)
+      type: number
+      description: 95th percentile of the total TDP (W) estimate.
+    - name: Chip Cost (Linked)
+      title: Chip Cost (Linked)
+      type: number
+      description: Approximate price of one chip in US dollars, from the Chip types table.
+    - name: Chip Cost (USD)
+      title: Chip Cost (USD)
+      type: number
+      description: Approximate price of one chip in US dollars.
+    - name: Cost Estimate (USD)
+      title: Cost Estimate (USD)
+      type: number
+      description: Approximate total purchase price of the chips in nominal US dollars, excluding server, system and facility costs.
+- name: cumulative_timelines
+  path: ai_chip_sales_cumulative_timelines.csv
+  title: Cumulative timelines by chip type
+  description: Estimated chips shipped since each chip type's launch, through the end of each quarter.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Brief identifier.
+    - name: Start date
+      title: Start date
+      type: date
+      description: Start date of the time period.
+    - name: End date
+      title: End date
+      type: date
+      description: End date of the time period.
+    - name: Chip manufacturer
+      title: Chip manufacturer
+      type: string
+      description: The company that designs, produces, or sells the relevant chips.
+    - name: Chip type
+      title: Chip type
+      type: string
+      description: Name or short text description of the relevant chip type(s), since chips in this record may span more than one chip type.
+    - name: Number of units (median)
+      title: Number of units (median)
+      type: number
+      description: Median estimate of the number of chips.
+    - name: Number of units (5th percentile)
+      title: Number of units (5th percentile)
+      type: number
+      description: 5th percentile estimate of number of units.
+    - name: Number of units (95th percentile)
+      title: Number of units (95th percentile)
+      type: number
+      description: 95th percentile estimate of number of units.
+    - name: H100e compute power (median)
+      title: H100e compute power (median)
+      type: number
+      description: Median estimate of the chips' computing power in H100-equivalents (peak 8-bit operations per second relative to an Nvidia H100).
+    - name: H100e compute power (5th percentile)
+      title: H100e compute power (5th percentile)
+      type: number
+      description: 5th percentile of the H100-equivalent compute estimate.
+    - name: H100e compute power (95th percentile)
+      title: H100e compute power (95th percentile)
+      type: number
+      description: 95th percentile of the H100-equivalent compute estimate.
+    - name: Chip H100e
+      title: Chip H100e
+      type: number
+      description: Computing power of one chip relative to an Nvidia H100, in 8-bit operations per second, from the Chip types table.
+    - name: Chip TDP (W)
+      title: Chip TDP (W)
+      type: number
+      description: Thermal design power of one chip, in watts, from the Chip types table.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Relevant notes for context.
+    - name: Total TDP (W) (median)
+      title: Total TDP (W) (median)
+      type: number
+      description: Total thermal design power of the chips in watts (median number of units times chip TDP), excluding server and facility overheads.
+    - name: Total TDP (W) (5th percentile)
+      title: Total TDP (W) (5th percentile)
+      type: number
+      description: 5th percentile of the total TDP (W) estimate.
+    - name: Total TDP (W) (95th percentile)
+      title: Total TDP (W) (95th percentile)
+      type: number
+      description: 95th percentile of the total TDP (W) estimate.
+    - name: Incomplete
+      title: Incomplete
+      type: boolean
+      description: True when the estimate doesn't cover the whole period, for example because the company's fiscal quarters don't line up with calendar quarters.
+    - name: Unofficial estimated TDP (W)
+      title: Unofficial estimated TDP (W)
+      type: number
+      description: Epoch AI's estimate of the chip's thermal design power in watts, where the designer hasn't published one.
+- name: cumulative_timelines_by_designer
+  path: ai_chip_sales_cumulative_timelines_by_designer.csv
+  title: Cumulative timelines by designer
+  description: Estimated chips shipped by each designer, all chip types together, through the end of each quarter.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Brief identifier.
+    - name: Chip manufacturer
+      title: Chip manufacturer
+      type: string
+      description: The company that designs, produces, or sells the relevant chips.
+    - name: Start date
+      title: Start date
+      type: date
+      description: Start date of the time period.
+    - name: End date
+      title: End date
+      type: date
+      description: End date of the time period.
+    - name: Compute estimate in H100e (median)
+      title: Compute estimate in H100e (median)
+      type: number
+      description: Median estimate of the chips' computing power in H100-equivalents (peak 8-bit operations per second relative to an Nvidia H100).
+    - name: Compute estimate in H100e (5th percentile)
+      title: Compute estimate in H100e (5th percentile)
+      type: number
+      description: 5th percentile of the H100-equivalent compute estimate.
+    - name: Compute estimate in H100e (95th percentile)
+      title: Compute estimate in H100e (95th percentile)
+      type: number
+      description: 95th percentile of the H100-equivalent compute estimate.
+    - name: Number of units (5th percentile)
+      title: Number of units (5th percentile)
+      type: number
+      description: 5th percentile estimate of number of units.
+    - name: Number of units (median)
+      title: Number of units (median)
+      type: number
+      description: Median estimate of the number of chips.
+    - name: Number of units (95th percentile)
+      title: Number of units (95th percentile)
+      type: number
+      description: 95th percentile estimate of number of units.
+    - name: Power in MW (5th percentile)
+      title: Power in MW (5th percentile)
+      type: number
+      description: 5th percentile of the power (MW) estimate.
+    - name: Power in MW (median)
+      title: Power in MW (median)
+      type: number
+      description: Median estimate of the chips' total power in megawatts, from chip TDP.
+    - name: Power in MW (95th percentile)
+      title: Power in MW (95th percentile)
+      type: number
+      description: 95th percentile of the power (MW) estimate.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Relevant notes for context.
+    - name: Incomplete
+      title: Incomplete
+      type: boolean
+      description: True when the estimate doesn't cover the whole period, for example because the company's fiscal quarters don't line up with calendar quarters.
+- name: owners_cumulative_by_designer
+  path: ai_chip_owners_cumulative_by_designer.csv
+  title: 'Owners: cumulative by designer'
+  description: Estimated chips owned by each owner through the end of each quarter, by designer.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Brief identifier for this record.
+    - name: Chip manufacturer
+      title: Chip manufacturer
+      type: string
+      description: The company that designs or manufactures the chips.
+    - name: Owner
+      title: Owner
+      type: string
+      description: The company or category that owns the chips.
+    - name: Start date
+      title: Start date
+      type: date
+      description: Start date of the cumulative time period.
+    - name: End date
+      title: End date
+      type: date
+      description: End date of the cumulative time period.
+    - name: Compute estimate in H100e (median)
+      title: Compute estimate in H100e (median)
+      type: number
+      description: Median estimate of the chips' computing power in H100-equivalents (peak 8-bit operations per second relative to an Nvidia H100).
+    - name: H100e (5th percentile)
+      title: H100e (5th percentile)
+      type: number
+      description: 5th percentile estimate of cumulative H100e computing power.
+    - name: H100e (95th percentile)
+      title: H100e (95th percentile)
+      type: number
+      description: 95th percentile estimate of cumulative H100e computing power.
+    - name: Number of Units (median)
+      title: Number of Units (median)
+      type: number
+      description: Median estimate of the number of chips.
+    - name: Number of Units (5th percentile)
+      title: Number of Units (5th percentile)
+      type: number
+      description: 5th percentile estimate of cumulative number of units.
+    - name: Number of Units (95th percentile)
+      title: Number of Units (95th percentile)
+      type: number
+      description: 95th percentile estimate of cumulative number of units.
+    - name: Power in MW (median)
+      title: Power in MW (median)
+      type: number
+      description: Median estimate of the chips' total power in megawatts, from chip TDP.
+    - name: Power in MW (5th percentile)
+      title: Power in MW (5th percentile)
+      type: number
+      description: 5th percentile estimate of total power draw in megawatts.
+    - name: Power in MW (95th percentile)
+      title: Power in MW (95th percentile)
+      type: number
+      description: 95th percentile estimate of total power draw in megawatts.
+    - name: Source / Link
+      title: Source / Link
+      type: string
+      description: Link to more information or methodology documentation.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Relevant notes for context.
+    - name: Last Modified By
+      title: Last Modified By
+      type: string
+      description: Person who last changed the record in Airtable.
+    - name: Last Modified
+      title: Last Modified
+      type: string
+      description: When the record was last changed in Airtable.
+    - name: Incomplete
+      title: Incomplete
+      type: boolean
+      description: True when the estimate doesn't cover the whole period, for example because the company's fiscal quarters don't line up with calendar quarters.
+- name: owners_cumulative_by_chip_type
+  path: ai_chip_owners_cumulative_by_chip_type.csv
+  title: 'Owners: cumulative by chip type'
+  description: Estimated chips owned by each owner through the end of each quarter, by chip type.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Brief identifier for this record.
+    - name: Chip manufacturer
+      title: Chip manufacturer
+      type: string
+      description: The company that designs or manufactures the chip.
+    - name: Owner
+      title: Owner
+      type: string
+      description: The company or category that owns the chips.
+    - name: Chip type
+      title: Chip type
+      type: string
+      description: Name of the specific chip model.
+    - name: Start date
+      title: Start date
+      type: date
+      description: Start date of the cumulative time period.
+    - name: End date
+      title: End date
+      type: date
+      description: End date of the cumulative time period.
+    - name: Compute estimate in H100e (median)
+      title: Compute estimate in H100e (median)
+      type: number
+      description: Median estimate of the chips' computing power in H100-equivalents (peak 8-bit operations per second relative to an Nvidia H100).
+    - name: H100e (5th percentile)
+      title: H100e (5th percentile)
+      type: number
+      description: 5th percentile estimate of cumulative H100e computing power.
+    - name: H100e (95th percentile)
+      title: H100e (95th percentile)
+      type: number
+      description: 95th percentile estimate of cumulative H100e computing power.
+    - name: Number of Units (median)
+      title: Number of Units (median)
+      type: number
+      description: Median estimate of the number of chips.
+    - name: Number of Units (5th percentile)
+      title: Number of Units (5th percentile)
+      type: number
+      description: 5th percentile estimate of cumulative number of units.
+    - name: Number of Units (95th percentile)
+      title: Number of Units (95th percentile)
+      type: number
+      description: 95th percentile estimate of cumulative number of units.
+    - name: Source / Link
+      title: Source / Link
+      type: string
+      description: Link to more information or methodology documentation.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Relevant notes for context.
+    - name: Last Modified By
+      title: Last Modified By
+      type: string
+      description: Person who last changed the record in Airtable.
+    - name: Last Modified
+      title: Last Modified
+      type: string
+      description: When the record was last changed in Airtable.
+    - name: Incomplete
+      title: Incomplete
+      type: boolean
+      description: True when the estimate doesn't cover the whole period, for example because the company's fiscal quarters don't line up with calendar quarters.
+    - name: Created
+      title: Created
+      type: string
+      description: When the record was created in Airtable.
+    - name: Total TDP (W)
+      title: Total TDP (W)
+      type: number
+      description: Total thermal design power of the chips in watts (median number of units times chip TDP), excluding server and facility overheads.
+    - name: Total TDP (W) (5th percentile)
+      title: Total TDP (W) (5th percentile)
+      type: number
+      description: 5th percentile of the total TDP (W) estimate.
+    - name: Total TDP (W) (95th percentile)
+      title: Total TDP (W) (95th percentile)
+      type: number
+      description: 95th percentile of the total TDP (W) estimate.
+    - name: Last Modified 2
+      title: Last Modified 2
+      type: datetime
+      description: When the record was last changed in Airtable (a second Airtable field of the same kind).
+- name: owners_quarters_by_chip_type
+  path: ai_chip_owners_quarters_by_chip_type.csv
+  title: 'Owners: quarters by chip type'
+  description: Estimated chips acquired by each owner during each quarter, by chip type.
+  schema:
+    fields:
+    - name: Name
+      title: Name
+      type: string
+      description: Brief identifier for this record.
+    - name: Chip manufacturer
+      title: Chip manufacturer
+      type: string
+      description: The company that designs or manufactures the chip.
+    - name: Owner
+      title: Owner
+      type: string
+      description: The company or category that owns the chips.
+    - name: Chip type
+      title: Chip type
+      type: string
+      description: Name of the specific chip model.
+    - name: Start date
+      title: Start date
+      type: date
+      description: Start date of the quarter.
+    - name: End date
+      title: End date
+      type: date
+      description: End date of the quarter.
+    - name: Compute estimate in H100e (median)
+      title: Compute estimate in H100e (median)
+      type: number
+      description: Median estimate of the chips' computing power in H100-equivalents (peak 8-bit operations per second relative to an Nvidia H100).
+    - name: H100e (5th percentile)
+      title: H100e (5th percentile)
+      type: number
+      description: 5th percentile estimate of H100e computing power.
+    - name: H100e (95th percentile)
+      title: H100e (95th percentile)
+      type: number
+      description: 95th percentile estimate of H100e computing power.
+    - name: Number of Units
+      title: Number of Units
+      type: number
+      description: Median estimate of the number of chips.
+    - name: Number of Units (5th percentile)
+      title: Number of Units (5th percentile)
+      type: number
+      description: 5th percentile estimate of number of units.
+    - name: Number of Units (95th percentile)
+      title: Number of Units (95th percentile)
+      type: number
+      description: 95th percentile estimate of number of units.
+    - name: Source / Link
+      title: Source / Link
+      type: string
+      description: Link to more information or methodology documentation.
+    - name: Notes
+      title: Notes
+      type: string
+      description: Relevant notes for context.
+    - name: Last Modified By
+      title: Last Modified By
+      type: string
+      description: Person who last changed the record in Airtable.
+    - name: Last Modified
+      title: Last Modified
+      type: string
+      description: When the record was last changed in Airtable.
+    - name: Incomplete
+      title: Incomplete
+      type: boolean
+      description: True when the estimate doesn't cover the whole period, for example because the company's fiscal quarters don't line up with calendar quarters.
+    - name: Total TDP (W)
+      title: Total TDP (W)
+      type: number
+      description: Total thermal design power of the chips in watts (median number of units times chip TDP), excluding server and facility overheads.
+    - name: Total TDP (W) (5th percentile)
+      title: Total TDP (W) (5th percentile)
+      type: number
+      description: 5th percentile of the total TDP (W) estimate.
+    - name: Total TDP (W) (95th percentile)
+      title: Total TDP (W) (95th percentile)
+      type: number
+      description: 95th percentile of the total TDP (W) estimate.
+
