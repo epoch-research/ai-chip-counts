@@ -1,0 +1,21 @@
+[project]
+name = "ai-chip-counts"
+version = "0.1.0"
+description = "Models and data pipeline behind epoch.ai/data/ai-chip-sales and ai-chip-owners"
+requires-python = ">=3.11"
+dependencies = [
+    "squigglepy",
+    "numpy",
+    "pandas",
+    "scipy",
+    "matplotlib",
+    "requests",
+    "python-dateutil",
+]
+
+[project.optional-dependencies]
+# Running notebooks headlessly (pipeline.tools.run_notebook) and pushing to Airtable
+dev = ["nbclient", "nbformat", "ipykernel", "python-dotenv"]
+
+[tool.setuptools]
+packages = ["models", "pipeline", "pipeline.tools"]

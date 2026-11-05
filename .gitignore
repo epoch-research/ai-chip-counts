@@ -1,2 +1,9 @@
 CLAUDE.md
 __pycache__/
+# Airtable credentials and pre-push snapshots of Airtable rows
+.env
+staging/_snapshots/
+*.egg-info/
+.DS_Store
+*.pyc
+.ipynb_checkpoints/
