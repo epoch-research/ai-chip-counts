@@ -17,6 +17,14 @@ Cross-session state for ai-chip-counts. Keep under about 40 lines; git history i
 
 ## Recent changes
 
+- 2026-11-03: TPU model reads new `rack_prices` and `customer_mix` tabs: Anthropic's Q3 FY26 v7
+  revenue may be booked as racks (`adjust_units` hook in `chip_utils`); no median-pinning blend, unlike
+  the data insight's notebook.
+- 2026-11-05: TPU prices are rank-matched per quarter (`quarter_price_distribution` in `chip_utils`):
+  a draw keeps its price percentile across quarters, but each quarter uses its own margin range. The
+  old rescaled-deflation method gave every quarter Q1 FY23's 55-70% spread. FY26 intervals narrow;
+  medians move <=1.3% (v8i +3% from the Q3 revenue edit). Exports and staging rerun; validate says
+  REVIEW only for v6e Q2 2026 p5 (145 vs 0 units). notebooks/tpu.ipynb not re-executed. Uncommitted.
 - 2026-10-16: merged main (Trainium H1 2026, Colab cells). `trainium_model.export_canonical`
   replaces the notebook's export cell; Trainium3 added to `pipeline/chip_type_map.csv`.
 - 2026-09-30: TPU rerun with Broadcom Q3 FY26 and the new TPU v8i. v8i's 8-bit OP/s is

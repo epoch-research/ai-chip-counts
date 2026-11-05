@@ -66,6 +66,8 @@ def estimate_cumulative_chip_sales(
     sample_revenue_uncertainty=None,
     price_correlation=None,
     base_price_distributions=None,
+    quarter_price_distribution=None,
+    adjust_units=None,
     n_samples=5000,
 ):
     """
@@ -99,6 +101,16 @@ def estimate_cumulative_chip_sales(
             Required when price_correlation is set. Maps each chip type to its base price
             distribution (e.g. BASE_PRICES dict). Used with sq.correlate to generate
             correlated price samples directly from the distributions.
+        quarter_price_distribution: fn(quarter, chip) -> squigglepy distribution, optional.
+            The price distribution for a chip in one quarter. If given, each quarter's prices
+            are drawn from it and reordered so every draw keeps the same rank as its base
+            price: a high-price draw stays high in every quarter, but each quarter has its
+            own spread. Replaces get_deflation_factor, which only rescales the base price
+            and so gives every quarter the base distribution's spread.
+        adjust_units: fn(quarter, chip, revenue, shares, price, units) -> np.array, optional.
+            Called after each quarter's units are computed, with every argument an array of
+            n_samples draws. Returns the adjusted units, e.g. to convert part of the revenue
+            at a different price per unit. If None, units are used as computed.
         n_samples: number of Monte Carlo samples
 
     Returns:
@@ -132,6 +144,9 @@ def estimate_cumulative_chip_sales(
             for chip in chip_types
         }
 
+    # Each draw's rank within its chip's base prices, for matching quarter prices to it
+    base_price_ranks = {chip: np.argsort(np.argsort(samples)) for chip, samples in base_price_samples.items()}
+
     # Revenue uncertainty (if provided)
     rev_multiplier = np.array([sample_revenue_uncertainty() for _ in range(n_samples)]) if sample_revenue_uncertainty else np.ones(n_samples)
 
@@ -147,9 +162,16 @@ def estimate_cumulative_chip_sales(
 
         for chip in chip_types:
             shares = np.nan_to_num(np.array([s.get(chip, 0) for s in shares_list]), nan=0.0)
-            deflation = get_deflation_factor(quarter, chip) if get_deflation_factor else 1.0
-            price = base_price_samples[chip] * deflation
-            results[quarter][chip] = (revenue * shares) / price
+            if quarter_price_distribution:
+                quarter_prices = np.sort(quarter_price_distribution(quarter, chip) @ n_samples)
+                price = quarter_prices[base_price_ranks[chip]]
+            else:
+                deflation = get_deflation_factor(quarter, chip) if get_deflation_factor else 1.0
+                price = base_price_samples[chip] * deflation
+            units = (revenue * shares) / price
+            if adjust_units:
+                units = adjust_units(quarter, chip, revenue, shares, price, units)
+            results[quarter][chip] = units
 
     return results
 

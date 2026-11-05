@@ -2,9 +2,15 @@
 
 Estimates quarterly and cumulative TPU production by dividing Broadcom TPU revenue
 across TPU versions (production mix) and dividing by per-chip price (manufacturing
-cost marked up by Broadcom's margin). Monte Carlo throughout, with chip prices
-presampled once per version and partially correlated across versions so that price
-uncertainty propagates into cumulative totals instead of averaging out.
+cost marked up by Broadcom's margin). Monte Carlo throughout. Each draw keeps the same
+price percentile for a version in every quarter, and percentiles are partially
+correlated across versions, so price uncertainty propagates into cumulative totals
+instead of averaging out. Each quarter's prices still follow that quarter's own margin.
+
+Revenue from non-Google buyers (the customer_mix tab; Anthropic from Q3 FY26) may be
+booked as finished racks rather than chips. In draws where it is, that slice converts at
+the rack price per TPU (rack_prices tab, already after Broadcom's margin), which buys
+fewer TPUs than the same revenue at the chip price.
 
 This module holds the model itself; notebooks/tpu.ipynb wraps it for visualization
 and sensitivity analysis, and run_chip_model.py uses it for the run-and-validate
@@ -44,7 +50,7 @@ DESIGNER = "google"
 
 N_SAMPLES = 5000
 RANDOM_SEED = 42
-PRICE_CORRELATION = 0.5  # correlation between chip prices across TPU versions
+PRICE_CORRELATION = 0.5  # rank correlation between chip prices across TPU versions
 
 # ---------------------------------------------------------------------------
 # Data sources
@@ -53,6 +59,8 @@ SPREADSHEET_ID = "1eGk2AAdewEO81vx-YBRTtdlhZvAMstY7vZuHrf3sgNI"
 REVENUE_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=TPU_Revenue"
 PROD_MIX_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Production_Mix"
 PRICES_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=prices"
+RACK_PRICES_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=rack_prices"
+CUSTOMER_MIX_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=customer_mix"
 
 CHIP_SPECS_ZIP_URL = "https://epoch.ai/data/ai_chip_sales.zip"
 
@@ -104,6 +112,19 @@ def _load_tpu_specs(chip_types_df, name_map, fallback_specs):
     return specs
 
 
+def _read_tab(url, required_columns):
+    """Read one sheet tab, checking it has the columns we expect.
+
+    The gviz endpoint silently returns the first tab when a tab name doesn't match,
+    so a renamed tab would otherwise load the revenue data in its place.
+    """
+    df = pd.read_csv(url).dropna(axis=1, how="all")
+    missing = set(required_columns) - set(df.columns)
+    if missing:
+        raise ValueError(f"Sheet tab at {url} is missing columns {sorted(missing)}; was the tab renamed?")
+    return df
+
+
 def load_inputs(verbose=True):
     """Fetch revenue/mix/price data from Google Sheets and chip specs from epoch.ai.
 
@@ -114,6 +135,8 @@ def load_inputs(verbose=True):
     revenue_df = pd.read_csv(REVENUE_URL).dropna(axis=1, how="all")
     prod_mix_df = pd.read_csv(PROD_MIX_URL).dropna(axis=1, how="all")
     prices_df = pd.read_csv(PRICES_URL).dropna(axis=1, how="all")
+    rack_prices_df = _read_tab(RACK_PRICES_URL, ["version", "rack_price_p5", "rack_price_p95"])
+    customer_mix_df = _read_tab(CUSTOMER_MIX_URL, ["quarter", "customer", "version", "share_p5", "share_p95", "p_rack"])
 
     quarters = revenue_df['quarter'].tolist()
     versions = prod_mix_df['version'].dropna().unique().tolist()
@@ -133,6 +156,24 @@ def load_inputs(verbose=True):
     tpu_cost = {row['version']: sq.to(row['cost_p5'], row['cost_p95']) for _, row in prices_df.iterrows()}
     margin_by_quarter = {row['quarter']: sq.to(row['broadcom_margin_p5'], row['broadcom_margin_p95'])
                          for _, row in revenue_df.iterrows()}
+
+    # Non-Google buyers: each one's share of a quarter's total TPU revenue, and the chance
+    # Broadcom books that customer's revenue at finished-rack value rather than chip value.
+    # Google is the remainder, so quarters with no rows are all Google.
+    customer_mix = {}
+    for _, row in customer_mix_df.dropna(subset=["quarter"]).iterrows():
+        share = sq.norm(row['share_p5'], row['share_p95'], lclip=0, rclip=1)
+        customer_mix.setdefault((row['quarter'], row['version']), []).append((row['customer'], share))
+    p_rack = {}
+    for customer, rows in customer_mix_df.dropna(subset=["quarter"]).groupby('customer'):
+        if rows['p_rack'].nunique() != 1:
+            raise ValueError(f"customer_mix gives {customer} more than one p_rack; booking is one fact per customer")
+        p_rack[customer] = float(rows['p_rack'].iloc[0])
+
+    # Selling price per TPU in a finished rack. Unlike tpu_cost this already includes
+    # Broadcom's margin, so no margin is applied to it.
+    rack_price = {row['version']: sq.to(row['rack_price_p5'], row['rack_price_p95'])
+                  for _, row in rack_prices_df.iterrows()}
 
     # Fiscal quarter date ranges (raw M/D/YYYY strings from the sheet)
     quarter_dates = {q: (revenue_df.loc[revenue_df['quarter'] == q, 'start_date'].iloc[0],
@@ -161,12 +202,17 @@ def load_inputs(verbose=True):
         "revenue_df": revenue_df,
         "prod_mix_df": prod_mix_df,
         "prices_df": prices_df,
+        "rack_prices_df": rack_prices_df,
+        "customer_mix_df": customer_mix_df,
         "quarters": quarters,
         "versions": versions,
         "tpu_revenue": tpu_revenue,
         "prod_mix": prod_mix,
         "tpu_cost": tpu_cost,
         "margin_by_quarter": margin_by_quarter,
+        "customer_mix": customer_mix,
+        "p_rack": p_rack,
+        "rack_price": rack_price,
         "quarter_dates": quarter_dates,
         "specs": specs,
     }
@@ -175,23 +221,15 @@ def load_inputs(verbose=True):
 # ---------------------------------------------------------------------------
 # Running the model
 # ---------------------------------------------------------------------------
-def _compute_expected_price_multiplier(margin_dist, n=10000):
-    """Average price markup implied by a margin distribution, found by sampling.
-
-    Price = cost / (1 - margin), and 1/(1-x) is convex, so the mean markup is not
-    the markup of the mean margin - hence empirical sampling rather than closed form.
-    """
-    samples = margin_dist @ n
-    return np.mean(1 / (1 - samples))
-
-
 def run_model(n_samples=N_SAMPLES, price_correlation=PRICE_CORRELATION, inputs=None, seed=RANDOM_SEED):
     """Run the Monte Carlo simulation and all downstream transforms.
 
-    Chip prices are presampled once per version (using the first quarter's margin)
-    and reused across quarters, so price uncertainty stays correlated over time and
-    accumulates into the cumulative totals. Re-running with a different
-    price_correlation reuses the same seed, so runs differ only by the parameter.
+    Each draw gets one price percentile per version, used in every quarter, so price
+    uncertainty stays correlated over time and accumulates into the cumulative totals.
+    Each quarter's price is that percentile of the quarter's own cost / (1 - margin)
+    distribution, so a quarter's interval reflects its own margin range. Re-running with
+    a different price_correlation reuses the same seed, so runs differ only by the
+    parameter.
 
     Returns a dict with the inputs and every samples structure the exports,
     visualizations, and sensitivity checks need.
@@ -210,27 +248,11 @@ def run_model(n_samples=N_SAMPLES, price_correlation=PRICE_CORRELATION, inputs=N
     tpu_cost = inputs["tpu_cost"]
     margin_by_quarter = inputs["margin_by_quarter"]
 
-    # Prices are anchored to the first quarter's margin; every other quarter gets a
-    # deflation factor reflecting how much that quarter's expected price markup
-    # differs from the base quarter's, using the sheet's per-quarter margins as the
-    # source of truth. Computed empirically (see _compute_expected_price_multiplier)
-    # and cached per distinct margin range so quarters with identical margin
-    # assumptions get identical factors.
+    # The first quarter's prices only set each draw's percentile (correlated across
+    # versions); every quarter's actual price comes from its own margin, at that percentile.
     base_quarter = quarters[0]
     base_prices = {version: tpu_cost[version] / (1 - margin_by_quarter[base_quarter])
                    for version in versions}
-
-    multiplier_by_margin_range = {}
-    for quarter in quarters:
-        margin = margin_by_quarter[quarter]
-        if (margin.x, margin.y) not in multiplier_by_margin_range:
-            multiplier_by_margin_range[(margin.x, margin.y)] = _compute_expected_price_multiplier(margin)
-    base_margin = margin_by_quarter[base_quarter]
-    deflation_by_quarter = {
-        quarter: (multiplier_by_margin_range[(margin_by_quarter[quarter].x, margin_by_quarter[quarter].y)]
-                  / multiplier_by_margin_range[(base_margin.x, base_margin.y)])
-        for quarter in quarters
-    }
 
     def sample_revenue(quarter):
         return (tpu_revenue[quarter] @ 1) * B
@@ -242,8 +264,34 @@ def run_model(n_samples=N_SAMPLES, price_correlation=PRICE_CORRELATION, inputs=N
     def sample_base_price(version):
         return (tpu_cost[version] / (1 - margin_by_quarter[base_quarter])) @ 1
 
-    def get_margin_deflation_factor(quarter, version):
-        return deflation_by_quarter[quarter]
+    def quarter_price(quarter, version):
+        return tpu_cost[version] / (1 - margin_by_quarter[quarter])
+
+    # Booking method and rack price are drawn once per run and shared across quarters, so a
+    # world where a customer's revenue is booked as racks stays that way for every quarter.
+    # They are drawn on first use rather than up front, so quarters with no customer rows
+    # see exactly the same random draws as a run without this adjustment.
+    is_rack, rack_price_samples = {}, {}
+    units_before_racks = {}
+
+    def convert_customer_revenue(quarter, version, revenue, shares, price, units):
+        rows = inputs["customer_mix"].get((quarter, version), [])
+        if not rows or version not in inputs["rack_price"]:
+            return units
+        units_before_racks[(quarter, version)] = units
+        if version not in rack_price_samples:
+            rack_price_samples[version] = inputs["rack_price"][version] @ n_samples
+        for customer, share_dist in rows:
+            if customer not in is_rack:
+                is_rack[customer] = (sq.bernoulli(inputs["p_rack"][customer]) @ n_samples).astype(bool)
+            # The customer's slice can't exceed this version's share of the quarter's revenue
+            customer_revenue = np.minimum(share_dist @ n_samples, shares) * revenue
+            # A unit in a rack never sells for less than the bare chip
+            rack_price = np.maximum(rack_price_samples[version], price)
+            price_per_unit = np.where(is_rack[customer], rack_price, price)
+            # Take the slice out at the chip price and add it back at its own price per unit
+            units = units - customer_revenue / price + customer_revenue / price_per_unit
+        return units
 
     quarterly_samples = estimate_cumulative_chip_sales(
         quarters=quarters,
@@ -251,10 +299,11 @@ def run_model(n_samples=N_SAMPLES, price_correlation=PRICE_CORRELATION, inputs=N
         sample_revenue=sample_revenue,
         sample_shares=sample_shares,
         sample_base_price=sample_base_price,
-        get_deflation_factor=get_margin_deflation_factor,
+        quarter_price_distribution=quarter_price,
         sample_revenue_uncertainty=None,
         price_correlation=price_correlation,
         base_price_distributions=base_prices,
+        adjust_units=convert_customer_revenue,
         n_samples=n_samples,
     )
 
@@ -272,7 +321,7 @@ def run_model(n_samples=N_SAMPLES, price_correlation=PRICE_CORRELATION, inputs=N
         "inputs": inputs,
         "n_samples": n_samples,
         "price_correlation": price_correlation,
-        "deflation_by_quarter": deflation_by_quarter,
+        "units_before_racks": units_before_racks,
         "quarters": quarters,
         "versions": versions,
         "specs": inputs["specs"],
@@ -331,24 +380,29 @@ TOTALS_CUTOFF = datetime(2022, 12, 31)
 def tpu_prices(results):
     """The model's own price per TPU, in USD, for the canonical cost columns.
 
-    The model prices each version at its manufacturing cost marked up by Broadcom's
-    margin, adjusted each quarter as the margin changes. This averages that price over
+    The model prices each version at its manufacturing cost marked up by each quarter's
+    Broadcom margin. This averages that quarter's median price over
     the quarters the version sold in, weighted by median units, so a chip sold mostly in
     lower-margin quarters gets the lower price. The chip_types table's list prices are
     not used for TPUs: TPU v4i has none, and the rest run 6-15% above the model's.
     """
     inputs = results["inputs"]
-    base_quarter = results["quarters"][0]
     # Seeded so the prices, and so the cost columns, are identical run to run.
     sq.set_seed(RANDOM_SEED)
+    median_price_by_margin = {}
+    def median_price(version, quarter):
+        margin = inputs["margin_by_quarter"][quarter]
+        key = (version, margin.x, margin.y)
+        if key not in median_price_by_margin:
+            median_price_by_margin[key] = float(np.median((inputs["tpu_cost"][version] / (1 - margin)) @ 20000))
+        return median_price_by_margin[key]
+
     prices = {}
     for version in results["versions"]:
-        base = inputs["tpu_cost"][version] / (1 - inputs["margin_by_quarter"][base_quarter])
-        base_median = float(np.median(base @ 20000))
         units = {q: float(np.median(results["quarterly_samples"][q][version])) for q in results["quarters"]}
         total = sum(units.values())
-        weighted = (sum(base_median * results["deflation_by_quarter"][q] * u for q, u in units.items()) / total
-                    if total else base_median)
+        weighted = (sum(median_price(version, q) * u for q, u in units.items()) / total
+                    if total else median_price(version, results["quarters"][0]))
         prices[get_tpu_name(version)] = round(weighted)
     return prices
 
