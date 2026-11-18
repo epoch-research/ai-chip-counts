@@ -1,0 +1,12 @@
+Name,Country,Type,Chip types
+Nvidia,United States of America,Chip designer,"H100,A800,H800,H20,A100,B200,B300,H200,Rubin"
+Google,United States of America,"Chip designer,Compute owner","TPU v5e,TPU v5p,TPU v6e,TPU v7,TPU v4,TPU v3,TPU v4i"
+Huawei,China,Chip designer,"Ascend 910B,Ascend 910C"
+Amazon,United States of America,"Chip designer,Compute owner","Trainium2,Trainium1,Trainium3"
+Microsoft,United States of America,Compute owner,
+AMD,United States of America,Chip designer,"Instinct MI250X,Instinct MI300A,Instinct MI308X,Instinct MI300X,Instinct MI325X,Instinct MI350X,Instinct MI355X"
+Meta,United States of America,Compute owner,
+CoreWeave,United States of America,Compute owner,
+Oracle,United States of America,Compute owner,
+Other (ex-Big 4 hyperscalers),,,
+Cambricon,China,Chip designer,Siyuan 590

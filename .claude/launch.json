@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lab-compute-tables-static",
+      "runtimeExecutable": "/opt/homebrew/bin/python3.11",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8742",
+        "--directory",
+        "ai-lab-compute/lab_compute_tables"
+      ],
+      "port": 8742
+    },
+    {
+      "name": "chip-hub",
+      "runtimeExecutable": "/opt/homebrew/bin/python3.11",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "."
+      ],
+      "port": 8765
+    }
+  ]
+}
