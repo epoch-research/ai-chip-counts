@@ -105,7 +105,7 @@ writes `NVIDIA` and should change to match.
 
 **Chip types**, one spelling each, without a manufacturer prefix:
 
-- Nvidia: `A100`, `A800`, `H100/H200`, `H800`, `H20`, `B200`, `B300`
+- Nvidia: `A100`, `A800`, `H100/H200`, `H800`, `H20`, `B200`, `B300`, `R200`
 - AMD: `MI250X`, `MI300A`, `MI300X`, `MI308X`, `MI325X`, `MI350X`, `MI355X`
 - Google: `TPU v4`, `TPU v4i`, `TPU v5e`, `TPU v5p`, `TPU v6e`, `TPU v7`
 - Amazon: `Trainium1`, `Trainium2`

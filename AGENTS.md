@@ -82,7 +82,7 @@ All notebooks export estimates to `csv_export/` as CSVs. Common column definitio
 - **Sample arrays**: results are stored as `{quarter: {chip_type: np.array(N_SAMPLES)}}` dicts, preserving per-sample correlations across chips/quarters
 - **Owner notebooks** (`*_owners.ipynb`): extend the base chip estimation by allocating chips to owners (hyperscalers, China, Other). Export to `owners_csv_export/` with an extra `Owner` column
 - **Data inputs**: `inputs/` has local CSVs; revenue/price/ownership data is loaded from Google Sheets URLs
-- **Chip types**: Nvidia uses `['A100', 'A800', 'H100/H200', 'H800', 'H20', 'B200', 'B300']`. China-spec chips are A800, H800, H20
+- **Chip types**: Nvidia uses `['A100', 'A800', 'H100/H200', 'H800', 'H20', 'B200', 'B300', 'R200']`. China-spec chips are A800, H800, H20
 - **H100e conversion**: `units * (chip_TOPS / 1979)` where CHIP_SPECS dict maps chip name → {TOPS, TDP}
 
 ## Model modules and the run-and-validate workflow

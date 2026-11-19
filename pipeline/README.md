@@ -11,7 +11,7 @@ assembles `staging/`, and the tools that check it. Run everything from the repo 
 | `push_airtable.py` | Pushes staging's six tables to Airtable: creates missing tables and fields, upserts on Name, deletes stale rows, writes only modelled rows. Dry run unless `--write`. Finds tables by the IDs recorded in `airtable_tables.json`, so they can be renamed in Airtable. |
 | `build_staging.py` | Merges `outputs/canonical/`, the converted legacy-only sources and `staging/curated/` into `staging/`. |
 | `tools/build_viewer.py` | Writes `staging/viewer-sales.html` and `viewer-owners.html`: the hub explorers with the data built in, openable from disk. Runs at the end of every build. |
-| `tools/run_notebook.py` | Runs a model notebook headlessly, without writing outputs into it. |
+| `tools/run_notebook.py` | Runs a notebook headlessly and saves its outputs (charts included) back into it, so committed outputs match the CSVs from the same run. |
 | `tools/diff_exports.py` | After a rerun, lists legacy CSVs whose numbers moved and restores those that differ only in timestamps. |
 | `tools/audit_vs_published.py` | Compares every staging cell with the published data (the website's Airtable mirror), by table, field and designer. |
 | `tools/compare_canonical.py` | Checks one family's canonical tables against the legacy CSVs they replace. |
