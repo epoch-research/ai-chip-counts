@@ -1,10 +1,10 @@
 {
-  "generated": "2026-11-05 11:51",
+  "generated": "2026-11-18 14:48",
   "tables": {
     "sales_quarterly_by_chip": {
-      "rows": 166,
+      "rows": 171,
       "sources": {
-        "outputs/canonical/nvidia": 54,
+        "outputs/canonical/nvidia": 59,
         "outputs/canonical/tpu": 38,
         "outputs/canonical/amd": 35,
         "staging/curated": 24,
@@ -12,9 +12,9 @@
       }
     },
     "sales_cumulative_by_chip": {
-      "rows": 261,
+      "rows": 270,
       "sources": {
-        "outputs/canonical/nvidia": 92,
+        "outputs/canonical/nvidia": 101,
         "outputs/canonical/tpu": 76,
         "outputs/canonical/amd": 48,
         "staging/curated": 24,
@@ -22,9 +22,9 @@
       }
     },
     "sales_cumulative_by_designer": {
-      "rows": 71,
+      "rows": 72,
       "sources": {
-        "outputs/canonical/nvidia": 19,
+        "outputs/canonical/nvidia": 20,
         "outputs/canonical/tpu": 16,
         "staging/curated": 16,
         "outputs/canonical/amd": 10,

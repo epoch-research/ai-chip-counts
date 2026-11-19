@@ -18,7 +18,7 @@
 
   // Chips shown on their own in the all-designers chip view; the rest of each designer's
   // line-up is pooled so the legend stays readable.
-  const INDIVIDUAL = { Nvidia: ['H100/H200', 'B200', 'B300'], AMD: ['MI300X'], Google: ['TPU v5e', 'TPU v6e', 'TPU v7'] };
+  const INDIVIDUAL = { Nvidia: ['H100/H200', 'B200', 'B300', 'R200'], AMD: ['MI300X'], Google: ['TPU v5e', 'TPU v6e', 'TPU v7'] };
   const OTHER_LABEL = { Nvidia: 'Other Nvidia', AMD: 'Other AMD', Google: 'Other TPUs' };
 
   const now = new Date();

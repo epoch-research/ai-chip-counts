@@ -15,7 +15,7 @@
   const SMUGGLED = 'China (smuggled)';
   const DESIGNER_LABEL = { Nvidia: 'Nvidia GPUs', AMD: 'AMD GPUs', Google: 'Google TPUs', Huawei: 'Huawei Ascend', Amazon: 'Amazon Trainium', Cambricon: 'Cambricon' };
   const DESIGNER_ORDER = ['Nvidia', 'AMD', 'Google', 'Huawei', 'Amazon', 'Cambricon'];
-  const INDIVIDUAL = { Nvidia: ['H100/H200', 'B200', 'B300'], AMD: ['MI300X'], Google: ['TPU v5e', 'TPU v6e', 'TPU v7'],
+  const INDIVIDUAL = { Nvidia: ['H100/H200', 'B200', 'B300', 'R200'], AMD: ['MI300X'], Google: ['TPU v5e', 'TPU v6e', 'TPU v7'],
     Amazon: ['Trainium1', 'Trainium2'], Huawei: ['Ascend 910B', 'Ascend 910C'] };
   const CHINA_TOOLTIP = '“China” means all mainland China customers. Nvidia and AMD figures only include official imports.';
   const release = (chip) => chipTypes.release.get(chip) || new Date(0);
